@@ -14,7 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      babies: {
+        Row: {
+          created_at: string
+          date_of_birth: string | null
+          id: string
+          name: string
+          photo_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date_of_birth?: string | null
+          id?: string
+          name: string
+          photo_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date_of_birth?: string | null
+          id?: string
+          name?: string
+          photo_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      entries: {
+        Row: {
+          baby_id: string | null
+          category_id: string
+          created_at: string
+          detail: string
+          duration_seconds: number | null
+          id: string
+          logged_at: string
+          user_id: string
+        }
+        Insert: {
+          baby_id?: string | null
+          category_id: string
+          created_at?: string
+          detail: string
+          duration_seconds?: number | null
+          id?: string
+          logged_at?: string
+          user_id: string
+        }
+        Update: {
+          baby_id?: string | null
+          category_id?: string
+          created_at?: string
+          detail?: string
+          duration_seconds?: number | null
+          id?: string
+          logged_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entries_baby_id_fkey"
+            columns: ["baby_id"]
+            isOneToOne: false
+            referencedRelation: "babies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
