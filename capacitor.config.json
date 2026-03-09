@@ -1,0 +1,9 @@
+{
+  "appId": "app.lovable.1eab71861fee42169dd94d859592797c",
+  "appName": "Baby Tracker",
+  "webDir": "dist",
+  "server": {
+    "url": "https://1eab7186-1fee-4216-9dd9-4d859592797c.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  }
+}
