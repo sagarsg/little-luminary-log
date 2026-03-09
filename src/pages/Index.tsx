@@ -15,6 +15,8 @@ const modalCategories = new Set(["feed", "diaper"]);
 const Index = () => {
   const [activeTimer, setActiveTimer] = useState<TrackingCategory | null>(null);
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
+  const [feedModalOpen, setFeedModalOpen] = useState(false);
+  const [diaperModalOpen, setDiaperModalOpen] = useState(false);
 
   const logEntry = useCallback((categoryId: string, detail: string) => {
     setEntries((prev) => [
