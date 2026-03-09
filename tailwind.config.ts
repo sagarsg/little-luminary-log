@@ -83,6 +83,38 @@ export default {
           DEFAULT: "hsl(var(--notes))",
           bg: "hsl(var(--notes-bg))",
         },
+        bath: {
+          DEFAULT: "hsl(var(--bath))",
+          bg: "hsl(var(--bath-bg))",
+        },
+        tummy: {
+          DEFAULT: "hsl(var(--tummy))",
+          bg: "hsl(var(--tummy-bg))",
+        },
+        story: {
+          DEFAULT: "hsl(var(--story))",
+          bg: "hsl(var(--story-bg))",
+        },
+        screen: {
+          DEFAULT: "hsl(var(--screen))",
+          bg: "hsl(var(--screen-bg))",
+        },
+        skincare: {
+          DEFAULT: "hsl(var(--skincare))",
+          bg: "hsl(var(--skincare-bg))",
+        },
+        play: {
+          DEFAULT: "hsl(var(--play))",
+          bg: "hsl(var(--play-bg))",
+        },
+        brush: {
+          DEFAULT: "hsl(var(--brush))",
+          bg: "hsl(var(--brush-bg))",
+        },
+        custom: {
+          DEFAULT: "hsl(var(--custom))",
+          bg: "hsl(var(--custom-bg))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
