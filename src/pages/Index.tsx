@@ -4,7 +4,7 @@ import TrackingGrid, { type TrackingCategory, categories } from "@/components/Tr
 import ActiveTimer from "@/components/ActiveTimer";
 import RecentActivity, { type ActivityEntry } from "@/components/RecentActivity";
 import QuickSummary from "@/components/QuickSummary";
-import VoiceCommand from "@/components/VoiceCommand";
+import SmartLogFAB from "@/components/SmartLogFAB";
 import InstallPrompt from "@/components/InstallPrompt";
 
 const timerCategories = new Set(["sleep", "feed", "pump", "tummy", "story", "screen", "skincare", "play", "bath"]);
@@ -45,11 +45,22 @@ const Index = () => {
     [logEntry]
   );
 
+  const handleStartTimer = useCallback((category: TrackingCategory) => {
+    setActiveTimer(category);
+  }, []);
+
+  const handleQuickLog = useCallback((categoryId: string, detail: string) => {
+    logEntry(categoryId, detail);
+  }, [logEntry]);
+
   const handleVoiceCommand = useCallback(
     (command: string, category: TrackingCategory | null) => {
       if (command === "stop" && activeTimer) {
-        // We'll simulate a stop — in reality the timer component handles duration
         setActiveTimer(null);
+        return;
+      }
+      if (command === "listen") {
+        // Voice listening handled by browser API in VoiceCommand
         return;
       }
       if (!category) return;
@@ -94,12 +105,12 @@ const Index = () => {
         <RecentActivity entries={entries} />
       </div>
 
-      <div className="fixed bottom-20 right-4 z-40">
-        <VoiceCommand
-          onCommand={handleVoiceCommand}
-          activeTimerCategory={activeTimer}
-        />
-      </div>
+      <SmartLogFAB
+        onQuickLog={handleQuickLog}
+        onStartTimer={handleStartTimer}
+        onVoiceCommand={handleVoiceCommand}
+        activeTimerCategory={activeTimer}
+      />
       <InstallPrompt />
     </div>
   );
