@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import DashboardHeader from "@/components/DashboardHeader";
 import TrackingGrid, { type TrackingCategory, categories } from "@/components/TrackingGrid";
 import ActiveTimer from "@/components/ActiveTimer";
@@ -8,27 +8,82 @@ import SmartLogFAB from "@/components/SmartLogFAB";
 import InstallPrompt from "@/components/InstallPrompt";
 import FeedLogModal from "@/components/FeedLogModal";
 import DiaperLogModal from "@/components/DiaperLogModal";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const timerCategories = new Set(["sleep", "pump", "tummy", "story", "screen", "skincare", "play", "bath"]);
-const modalCategories = new Set(["feed", "diaper"]);
 
 const Index = () => {
+  const { user } = useAuth();
   const [activeTimer, setActiveTimer] = useState<TrackingCategory | null>(null);
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
   const [feedModalOpen, setFeedModalOpen] = useState(false);
   const [diaperModalOpen, setDiaperModalOpen] = useState(false);
 
-  const logEntry = useCallback((categoryId: string, detail: string) => {
-    setEntries((prev) => [
-      {
+  // Load today's entries from database
+  useEffect(() => {
+    if (!user) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const loadEntries = async () => {
+      const { data, error } = await supabase
+        .from("entries")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("logged_at", today.toISOString())
+        .order("logged_at", { ascending: false });
+
+      if (error) {
+        console.error("Failed to load entries:", error);
+        return;
+      }
+
+      setEntries(
+        (data || []).map((e) => ({
+          id: e.id,
+          categoryId: e.category_id,
+          time: new Date(e.logged_at),
+          detail: e.detail,
+        }))
+      );
+    };
+
+    loadEntries();
+  }, [user]);
+
+  const logEntry = useCallback(
+    async (categoryId: string, detail: string, durationSeconds?: number) => {
+      if (!user) return;
+
+      const newEntry: ActivityEntry = {
         id: crypto.randomUUID(),
         categoryId,
         time: new Date(),
         detail,
-      },
-      ...prev,
-    ]);
-  }, []);
+      };
+
+      // Optimistic update
+      setEntries((prev) => [newEntry, ...prev]);
+
+      const { error } = await supabase.from("entries").insert({
+        id: newEntry.id,
+        user_id: user.id,
+        category_id: categoryId,
+        detail,
+        duration_seconds: durationSeconds || null,
+        logged_at: newEntry.time.toISOString(),
+      });
+
+      if (error) {
+        console.error("Failed to save entry:", error);
+        toast.error("Failed to save — check your connection");
+        setEntries((prev) => prev.filter((e) => e.id !== newEntry.id));
+      }
+    },
+    [user]
+  );
 
   const handleCategoryTap = useCallback(
     (category: TrackingCategory) => {
@@ -48,7 +103,11 @@ const Index = () => {
   const handleTimerStop = useCallback(
     (category: TrackingCategory, durationSeconds: number) => {
       const mins = Math.round(durationSeconds / 60);
-      logEntry(category.id, mins > 0 ? `${mins} min session` : `${durationSeconds}s session`);
+      logEntry(
+        category.id,
+        mins > 0 ? `${mins} min session` : `${durationSeconds}s session`,
+        durationSeconds
+      );
       setActiveTimer(null);
     },
     [logEntry]
@@ -58,9 +117,12 @@ const Index = () => {
     setActiveTimer(category);
   }, []);
 
-  const handleQuickLog = useCallback((categoryId: string, detail: string) => {
-    logEntry(categoryId, detail);
-  }, [logEntry]);
+  const handleQuickLog = useCallback(
+    (categoryId: string, detail: string) => {
+      logEntry(categoryId, detail);
+    },
+    [logEntry]
+  );
 
   const handleVoiceCommand = useCallback(
     (command: string, category: TrackingCategory | null) => {
@@ -68,10 +130,7 @@ const Index = () => {
         setActiveTimer(null);
         return;
       }
-      if (command === "listen") {
-        // Voice listening handled by browser API in VoiceCommand
-        return;
-      }
+      if (command === "listen") return;
       if (!category) return;
 
       if (command === "start" && timerCategories.has(category.id)) {
@@ -84,14 +143,15 @@ const Index = () => {
   );
 
   const summary = {
-    sleepHours: Math.round(
-      entries
-        .filter((e) => e.categoryId === "sleep")
-        .reduce((acc, e) => {
-          const match = e.detail.match(/(\d+) min/);
-          return acc + (match ? parseInt(match[1]) / 60 : 0);
-        }, 0) * 10
-    ) / 10,
+    sleepHours:
+      Math.round(
+        entries
+          .filter((e) => e.categoryId === "sleep")
+          .reduce((acc, e) => {
+            const match = e.detail.match(/(\d+) min/);
+            return acc + (match ? parseInt(match[1]) / 60 : 0);
+          }, 0) * 10
+      ) / 10,
     feeds: entries.filter((e) => e.categoryId === "feed").length,
     diapers: entries.filter((e) => e.categoryId === "diaper").length,
   };
@@ -125,7 +185,7 @@ const Index = () => {
         onClose={() => setFeedModalOpen(false)}
         onLog={handleQuickLog}
         onStartTimer={() => {
-          const feedCat = categories.find(c => c.id === "feed");
+          const feedCat = categories.find((c) => c.id === "feed");
           if (feedCat) setActiveTimer(feedCat);
         }}
       />
