@@ -31,6 +31,7 @@ function generateDayEntries(): TimeEntry[] {
 }
 
 const HOUR_HEIGHT = 48; // px per hour
+const MIN_BLOCK_HEIGHT = 32; // minimum height so text is always readable
 const START_HOUR = 0;
 const END_HOUR = 24;
 
