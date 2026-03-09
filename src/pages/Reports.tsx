@@ -8,12 +8,23 @@ import SleepSummary from "@/components/reports/SleepSummary";
 import FeedSummary from "@/components/reports/FeedSummary";
 
 type ViewMode = "day" | "week" | "list" | "summary";
+type CategoryFilter = "all" | "sleep" | "feed" | "diaper" | "pump" | "activities" | "growth";
 
 const viewModes: { id: ViewMode; label: string }[] = [
   { id: "day", label: "Day" },
   { id: "week", label: "Week" },
   { id: "list", label: "List" },
   { id: "summary", label: "Summary" },
+];
+
+const categoryFilters: { id: CategoryFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "sleep", label: "Sleep" },
+  { id: "feed", label: "Feed" },
+  { id: "diaper", label: "Diaper" },
+  { id: "pump", label: "Pump" },
+  { id: "activities", label: "Activities" },
+  { id: "growth", label: "Growth" },
 ];
 
 const generateMockSleepData = () =>
@@ -32,6 +43,7 @@ const generateMockFeedData = () =>
 
 const Reports = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [activeFilter, setActiveFilter] = useState<CategoryFilter>("all");
   const [activePeriod, setActivePeriod] = useState("7D");
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -54,7 +66,7 @@ const Reports = () => {
 
   return (
     <div className="min-h-screen bg-background max-w-md mx-auto pb-24">
-      {/* Header with child name */}
+      {/* Header */}
       <header className="px-5 pt-6 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -67,8 +79,8 @@ const Reports = () => {
         </button>
       </header>
 
-      {/* View Mode Tabs - Huckleberry style */}
-      <div className="px-5 mb-3 flex items-center gap-2">
+      {/* View Mode Tabs */}
+      <div className="px-5 mb-2 flex items-center gap-2">
         <div className="flex-1 flex bg-muted rounded-xl p-1">
           {viewModes.map((mode) => (
             <button
@@ -81,6 +93,25 @@ const Reports = () => {
               }`}
             >
               {mode.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Category Filter Tabs */}
+      <div className="px-5 mb-3 overflow-x-auto scrollbar-none">
+        <div className="flex gap-1 min-w-max">
+          {categoryFilters.map((filter) => (
+            <button
+              key={filter.id}
+              onClick={() => setActiveFilter(filter.id)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
+                activeFilter === filter.id
+                  ? "bg-primary/10 text-primary border border-primary/20"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {filter.label}
             </button>
           ))}
         </div>
@@ -109,45 +140,51 @@ const Reports = () => {
         </div>
       )}
 
-      {/* Week View - Huckleberry-style colored block timeline */}
+      {/* Week View — clean daily summary cards */}
       {viewMode === "week" && (
-        <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
-          <WeekTimeline currentDate={currentDate} />
-          <div className="mt-3 border-t border-border/40 pt-1">
-            <RecentEntries />
-          </div>
-        </div>
+        <WeekTimeline currentDate={currentDate} activeFilter={activeFilter} />
       )}
 
-      {/* Day View - Vertical timeline with blocks */}
+      {/* Day View */}
       {viewMode === "day" && (
-        <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
+        <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 260px)" }}>
           <DayTimeline currentDate={currentDate} />
         </div>
       )}
 
-      {/* List View - Card-based entries */}
+      {/* List View */}
       {viewMode === "list" && (
         <RecentEntries />
       )}
 
-      {/* Summary View */}
-      {viewMode === "summary" && (
-        <div className="space-y-4">
-          <SleepSummary
-            sleepData={sleepData}
-            pieData={pieData}
-            totalNap={totalNap}
-            totalNight={totalNight}
-            totalDaily={totalDaily}
-            activePeriod={activePeriod}
-            setActivePeriod={setActivePeriod}
-          />
+      {/* Summary View — filtered by category */}
+      {viewMode === "summary" && (activeFilter === "all" || activeFilter === "sleep") && (
+        <SleepSummary
+          sleepData={sleepData}
+          pieData={pieData}
+          totalNap={totalNap}
+          totalNight={totalNight}
+          totalDaily={totalDaily}
+          activePeriod={activePeriod}
+          setActivePeriod={setActivePeriod}
+        />
+      )}
+      {viewMode === "summary" && (activeFilter === "all" || activeFilter === "feed") && (
+        <div className={activeFilter === "all" ? "mt-4" : ""}>
           <FeedSummary
             feedData={feedData}
             activePeriod={activePeriod}
             setActivePeriod={setActivePeriod}
           />
+        </div>
+      )}
+      {viewMode === "summary" && !["all", "sleep", "feed"].includes(activeFilter) && (
+        <div className="px-5">
+          <div className="bg-card rounded-2xl p-8 tracking-card-shadow text-center">
+            <p className="text-muted-foreground text-sm">
+              Summary for {categoryFilters.find((f) => f.id === activeFilter)?.label} coming soon
+            </p>
+          </div>
         </div>
       )}
     </div>
