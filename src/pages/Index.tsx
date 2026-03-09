@@ -6,8 +6,11 @@ import RecentActivity, { type ActivityEntry } from "@/components/RecentActivity"
 import QuickSummary from "@/components/QuickSummary";
 import SmartLogFAB from "@/components/SmartLogFAB";
 import InstallPrompt from "@/components/InstallPrompt";
+import FeedLogModal from "@/components/FeedLogModal";
+import DiaperLogModal from "@/components/DiaperLogModal";
 
-const timerCategories = new Set(["sleep", "feed", "pump", "tummy", "story", "screen", "skincare", "play", "bath"]);
+const timerCategories = new Set(["sleep", "pump", "tummy", "story", "screen", "skincare", "play", "bath"]);
+const modalCategories = new Set(["feed", "diaper"]);
 
 const Index = () => {
   const [activeTimer, setActiveTimer] = useState<TrackingCategory | null>(null);
