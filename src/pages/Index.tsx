@@ -98,6 +98,7 @@ const Index = () => {
         onCommand={handleVoiceCommand}
         activeTimerCategory={activeTimer}
       />
+      <InstallPrompt />
     </div>
   );
 };
