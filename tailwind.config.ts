@@ -13,6 +13,9 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['"DM Sans"', "system-ui", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -46,6 +49,39 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        // Tracking categories
+        sleep: {
+          DEFAULT: "hsl(var(--sleep))",
+          bg: "hsl(var(--sleep-bg))",
+        },
+        feed: {
+          DEFAULT: "hsl(var(--feed))",
+          bg: "hsl(var(--feed-bg))",
+        },
+        diaper: {
+          DEFAULT: "hsl(var(--diaper))",
+          bg: "hsl(var(--diaper-bg))",
+        },
+        temp: {
+          DEFAULT: "hsl(var(--temp))",
+          bg: "hsl(var(--temp-bg))",
+        },
+        growth: {
+          DEFAULT: "hsl(var(--growth))",
+          bg: "hsl(var(--growth-bg))",
+        },
+        meds: {
+          DEFAULT: "hsl(var(--meds))",
+          bg: "hsl(var(--meds-bg))",
+        },
+        pump: {
+          DEFAULT: "hsl(var(--pump))",
+          bg: "hsl(var(--pump-bg))",
+        },
+        notes: {
+          DEFAULT: "hsl(var(--notes))",
+          bg: "hsl(var(--notes-bg))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
