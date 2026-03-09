@@ -32,7 +32,11 @@ const Index = () => {
 
   const handleCategoryTap = useCallback(
     (category: TrackingCategory) => {
-      if (timerCategories.has(category.id)) {
+      if (category.id === "feed") {
+        setFeedModalOpen(true);
+      } else if (category.id === "diaper") {
+        setDiaperModalOpen(true);
+      } else if (timerCategories.has(category.id)) {
         setActiveTimer(category);
       } else {
         logEntry(category.id, getDefaultDetail(category.id));
