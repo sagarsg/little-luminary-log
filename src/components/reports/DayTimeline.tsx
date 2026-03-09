@@ -107,15 +107,15 @@ export default function DayTimeline({ currentDate }: DayTimelineProps) {
                   zIndex: height < 40 ? 2 : 1,
                 }}
               >
-                {cat && isTall && (
-                  <cat.icon className="w-3.5 h-3.5 text-white/90 flex-shrink-0 mt-0.5" />
+                {cat && (
+                  <cat.icon className="w-4 h-4 text-white flex-shrink-0" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium text-white/95 truncate leading-tight">
+                  <p className="text-xs font-semibold text-white truncate leading-tight">
                     {entry.label}
                   </p>
-                  {entry.detail && isTall && (
-                    <p className="text-[9px] text-white/70 truncate">{entry.detail}</p>
+                  {entry.detail && height > 40 && (
+                    <p className="text-[10px] text-white/80 truncate">{entry.detail}</p>
                   )}
                 </div>
               </div>

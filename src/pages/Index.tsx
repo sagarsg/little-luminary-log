@@ -94,10 +94,12 @@ const Index = () => {
         <RecentActivity entries={entries} />
       </div>
 
-      <VoiceCommand
-        onCommand={handleVoiceCommand}
-        activeTimerCategory={activeTimer}
-      />
+      <div className="fixed bottom-20 right-4 z-40">
+        <VoiceCommand
+          onCommand={handleVoiceCommand}
+          activeTimerCategory={activeTimer}
+        />
+      </div>
       <InstallPrompt />
     </div>
   );
