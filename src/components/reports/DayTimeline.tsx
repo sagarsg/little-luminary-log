@@ -93,8 +93,8 @@ export default function DayTimeline({ currentDate }: DayTimelineProps) {
             const cat = categories.find((c) => c.id === entry.categoryId);
             const color = categoryColors[entry.categoryId] || "hsl(var(--muted))";
             const top = (entry.startHour - START_HOUR) * HOUR_HEIGHT;
-            const height = Math.max(entry.durationHours * HOUR_HEIGHT, 12);
-            const isTall = height > 28;
+            const height = Math.max(entry.durationHours * HOUR_HEIGHT, MIN_BLOCK_HEIGHT);
+            const isTall = true; // always show icon and text
 
             return (
               <div
