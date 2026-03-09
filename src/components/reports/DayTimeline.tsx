@@ -99,12 +99,12 @@ export default function DayTimeline({ currentDate }: DayTimelineProps) {
             return (
               <div
                 key={entry.id}
-                className="absolute left-0 right-0 rounded-lg px-2 py-1 flex items-start gap-2 overflow-hidden cursor-pointer hover:brightness-95 transition-all"
+                className="absolute left-0 right-0 rounded-lg px-3 py-1.5 flex items-center gap-2 overflow-hidden cursor-pointer hover:brightness-95 transition-all"
                 style={{
                   top,
                   height,
                   backgroundColor: color,
-                  opacity: 0.85,
+                  zIndex: height < 40 ? 2 : 1,
                 }}
               >
                 {cat && isTall && (
