@@ -5,6 +5,7 @@ import ActiveTimer from "@/components/ActiveTimer";
 import RecentActivity, { type ActivityEntry } from "@/components/RecentActivity";
 import QuickSummary from "@/components/QuickSummary";
 import VoiceCommand from "@/components/VoiceCommand";
+import InstallPrompt from "@/components/InstallPrompt";
 
 const timerCategories = new Set(["sleep", "feed", "pump", "tummy", "story", "screen", "skincare", "play", "bath"]);
 
@@ -97,6 +98,7 @@ const Index = () => {
         onCommand={handleVoiceCommand}
         activeTimerCategory={activeTimer}
       />
+      <InstallPrompt />
     </div>
   );
 };
