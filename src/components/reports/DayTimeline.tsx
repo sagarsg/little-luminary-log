@@ -53,6 +53,49 @@ function hourLabel(h: number): string {
   return `${h - 12}p`;
 }
 
+// Gmail-style overlap layout: assign each entry a column index and total columns in its group
+type LayoutEntry = TimeEntry & { col: number; totalCols: number };
+
+function layoutEntries(entries: TimeEntry[]): LayoutEntry[] {
+  const sorted = [...entries].sort((a, b) => a.startHour - b.startHour);
+  const result: LayoutEntry[] = [];
+
+  // Track active columns: each column holds the end time of its current block
+  const columns: number[] = [];
+
+  for (const entry of sorted) {
+    const entryEnd = entry.startHour + Math.max(entry.durationHours, MIN_BLOCK_HEIGHT / HOUR_HEIGHT);
+
+    // Find first column where the entry doesn't overlap
+    let placed = false;
+    for (let c = 0; c < columns.length; c++) {
+      if (entry.startHour >= columns[c]) {
+        columns[c] = entryEnd;
+        result.push({ ...entry, col: c, totalCols: 0 }); // totalCols set later
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      result.push({ ...entry, col: columns.length, totalCols: 0 });
+      columns.push(entryEnd);
+    }
+  }
+
+  // Now compute totalCols for each entry by finding all overlapping entries
+  for (const entry of result) {
+    const entryEnd = entry.startHour + Math.max(entry.durationHours, MIN_BLOCK_HEIGHT / HOUR_HEIGHT);
+    const overlapping = result.filter((other) => {
+      const otherEnd = other.startHour + Math.max(other.durationHours, MIN_BLOCK_HEIGHT / HOUR_HEIGHT);
+      return other.startHour < entryEnd && otherEnd > entry.startHour;
+    });
+    const maxCol = Math.max(...overlapping.map((o) => o.col)) + 1;
+    entry.totalCols = maxCol;
+  }
+
+  return result;
+}
+
 interface DayTimelineProps {
   currentDate: Date;
 }
@@ -60,6 +103,7 @@ interface DayTimelineProps {
 export default function DayTimeline({ currentDate }: DayTimelineProps) {
   const entries = generateDayEntries();
   const totalHeight = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
+  const laid = layoutEntries(entries);
 
   return (
     <div className="px-3">
@@ -88,33 +132,38 @@ export default function DayTimeline({ currentDate }: DayTimelineProps) {
             />
           ))}
 
-          {/* Activity blocks */}
-          {entries.map((entry) => {
+          {/* Activity blocks — Gmail-style side-by-side for overlaps */}
+          {laid.map((entry) => {
             const cat = categories.find((c) => c.id === entry.categoryId);
             const color = categoryColors[entry.categoryId] || "hsl(var(--muted))";
             const top = (entry.startHour - START_HOUR) * HOUR_HEIGHT;
             const height = Math.max(entry.durationHours * HOUR_HEIGHT, MIN_BLOCK_HEIGHT);
-            const isTall = true; // always show icon and text
+
+            const widthPercent = 100 / entry.totalCols;
+            const leftPercent = entry.col * widthPercent;
+            const isNarrow = entry.totalCols > 1;
 
             return (
               <div
                 key={entry.id}
-                className="absolute left-0 right-0 rounded-lg px-3 py-1.5 flex items-center gap-2 overflow-hidden cursor-pointer hover:brightness-95 transition-all"
+                className="absolute rounded-lg px-2 py-1 flex items-center gap-1.5 overflow-hidden cursor-pointer hover:brightness-95 transition-all"
                 style={{
                   top,
                   height,
+                  left: `${leftPercent}%`,
+                  width: `calc(${widthPercent}% - 2px)`,
                   backgroundColor: color,
-                  zIndex: height < 40 ? 2 : 1,
+                  zIndex: entry.col + 1,
                 }}
               >
                 {cat && (
-                  <cat.icon className="w-4 h-4 text-white flex-shrink-0" />
+                  <cat.icon className={`${isNarrow ? "w-3 h-3" : "w-4 h-4"} text-white flex-shrink-0`} />
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-white truncate leading-tight">
+                  <p className={`${isNarrow ? "text-[10px]" : "text-xs"} font-semibold text-white truncate leading-tight`}>
                     {entry.label}
                   </p>
-                  {entry.detail && height > 40 && (
+                  {entry.detail && height > 40 && !isNarrow && (
                     <p className="text-[10px] text-white/80 truncate">{entry.detail}</p>
                   )}
                 </div>
