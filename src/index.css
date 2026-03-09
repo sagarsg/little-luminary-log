@@ -57,6 +57,28 @@
     --notes: 152 30% 50%;
     --notes-bg: 152 30% 93%;
 
+    /* Activity colors */
+    --bath: 195 55% 55%;
+    --bath-bg: 195 55% 93%;
+    --tummy: 32 60% 58%;
+    --tummy-bg: 32 60% 93%;
+    --story: 270 40% 62%;
+    --story-bg: 270 40% 93%;
+    --screen: 210 50% 55%;
+    --screen-bg: 210 50% 93%;
+    --skincare: 340 45% 65%;
+    --skincare-bg: 340 45% 93%;
+    --play: 130 40% 48%;
+    --play-bg: 130 40% 93%;
+    --brush: 180 40% 50%;
+    --brush-bg: 180 40% 93%;
+    --custom: 25 30% 55%;
+    --custom-bg: 25 30% 93%;
+
+    /* Voice indicator */
+    --voice-active: 152 50% 45%;
+    --voice-pulse: 152 50% 70%;
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
