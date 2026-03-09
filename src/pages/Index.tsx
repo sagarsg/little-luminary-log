@@ -6,12 +6,17 @@ import RecentActivity, { type ActivityEntry } from "@/components/RecentActivity"
 import QuickSummary from "@/components/QuickSummary";
 import SmartLogFAB from "@/components/SmartLogFAB";
 import InstallPrompt from "@/components/InstallPrompt";
+import FeedLogModal from "@/components/FeedLogModal";
+import DiaperLogModal from "@/components/DiaperLogModal";
 
-const timerCategories = new Set(["sleep", "feed", "pump", "tummy", "story", "screen", "skincare", "play", "bath"]);
+const timerCategories = new Set(["sleep", "pump", "tummy", "story", "screen", "skincare", "play", "bath"]);
+const modalCategories = new Set(["feed", "diaper"]);
 
 const Index = () => {
   const [activeTimer, setActiveTimer] = useState<TrackingCategory | null>(null);
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
+  const [feedModalOpen, setFeedModalOpen] = useState(false);
+  const [diaperModalOpen, setDiaperModalOpen] = useState(false);
 
   const logEntry = useCallback((categoryId: string, detail: string) => {
     setEntries((prev) => [
@@ -27,7 +32,11 @@ const Index = () => {
 
   const handleCategoryTap = useCallback(
     (category: TrackingCategory) => {
-      if (timerCategories.has(category.id)) {
+      if (category.id === "feed") {
+        setFeedModalOpen(true);
+      } else if (category.id === "diaper") {
+        setDiaperModalOpen(true);
+      } else if (timerCategories.has(category.id)) {
         setActiveTimer(category);
       } else {
         logEntry(category.id, getDefaultDetail(category.id));
@@ -110,6 +119,20 @@ const Index = () => {
         onStartTimer={handleStartTimer}
         onVoiceCommand={handleVoiceCommand}
         activeTimerCategory={activeTimer}
+      />
+      <FeedLogModal
+        open={feedModalOpen}
+        onClose={() => setFeedModalOpen(false)}
+        onLog={handleQuickLog}
+        onStartTimer={() => {
+          const feedCat = categories.find(c => c.id === "feed");
+          if (feedCat) setActiveTimer(feedCat);
+        }}
+      />
+      <DiaperLogModal
+        open={diaperModalOpen}
+        onClose={() => setDiaperModalOpen(false)}
+        onLog={handleQuickLog}
       />
       <InstallPrompt />
     </div>
