@@ -1,207 +1,203 @@
-import { format, subDays, startOfWeek, addDays } from "date-fns";
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
+import { format, startOfWeek, addDays } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import { Moon, UtensilsCrossed, Droplets, Milk, Baby, ChevronDown } from "lucide-react";
+import { categories } from "@/components/TrackingGrid";
 
-// Mock activity blocks for the week timeline (Huckleberry-style)
-type TimeBlock = {
-  categoryId: string;
-  startHour: number; // 0-24 decimal
-  durationHours: number;
+type DaySummary = {
+  date: Date;
+  sleepHours: number;
+  napHours: number;
+  feeds: number;
+  oz: number;
+  diapers: number;
+  pumps: number;
+  activities: { categoryId: string; label: string; time: string }[];
 };
 
-const categoryColors: Record<string, string> = {
-  sleep: "hsl(var(--sleep))",
-  feed: "hsl(var(--feed))",
-  diaper: "hsl(var(--diaper))",
-  pump: "hsl(var(--pump))",
-  tummy: "hsl(var(--tummy))",
-  bath: "hsl(var(--bath))",
-  play: "hsl(var(--play))",
-  meds: "hsl(var(--meds))",
-};
+function generateWeekSummaries(weekStart: Date): DaySummary[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(weekStart, i);
+    const nightHours = 8 + Math.random() * 3;
+    const napHours = 1.5 + Math.random() * 2;
+    const feeds = Math.floor(5 + Math.random() * 4);
+    const oz = Math.round((feeds * 3.5 + Math.random() * 4) * 10) / 10;
+    const diapers = Math.floor(4 + Math.random() * 4);
+    const pumps = Math.floor(Math.random() * 3);
 
-const categoryPatterns: Record<string, boolean> = {
-  sleep: true, // hatched pattern for naps
-};
+    const activities: DaySummary["activities"] = [
+      { categoryId: "sleep", label: `Night sleep · ${formatHM(nightHours)}`, time: "7:00 PM" },
+      { categoryId: "sleep", label: `Nap · ${formatHM(napHours)}`, time: "9:30 AM" },
+    ];
 
-// Generate realistic mock data for a week
-function generateWeekData(weekStart: Date): Record<string, TimeBlock[]> {
-  const data: Record<string, TimeBlock[]> = {};
-
-  for (let d = 0; d < 7; d++) {
-    const dayKey = format(addDays(weekStart, d), "yyyy-MM-dd");
-    const blocks: TimeBlock[] = [];
-
-    // Night sleep (prev night 7pm-ish to early morning)
-    const nightStart = 19 + Math.random() * 1.5;
-    blocks.push({ categoryId: "sleep", startHour: nightStart, durationHours: 24 - nightStart + 6 + Math.random() * 1.5 });
-
-    // Morning feed
-    blocks.push({ categoryId: "feed", startHour: 7 + Math.random() * 0.5, durationHours: 0.3 });
-
-    // Morning nap
-    const nap1Start = 9 + Math.random() * 0.5;
-    blocks.push({ categoryId: "sleep", startHour: nap1Start, durationHours: 1 + Math.random() * 1 });
-
-    // Late morning feed
-    blocks.push({ categoryId: "feed", startHour: 11 + Math.random() * 0.5, durationHours: 0.3 });
-
-    // Diaper
-    blocks.push({ categoryId: "diaper", startHour: 9.5 + Math.random(), durationHours: 0.15 });
-    blocks.push({ categoryId: "diaper", startHour: 13 + Math.random(), durationHours: 0.15 });
-
-    // Afternoon nap
-    const nap2Start = 13 + Math.random() * 1;
-    blocks.push({ categoryId: "sleep", startHour: nap2Start, durationHours: 0.75 + Math.random() * 1 });
-
-    // Afternoon feed
-    blocks.push({ categoryId: "feed", startHour: 15 + Math.random() * 0.5, durationHours: 0.3 });
-
-    // Tummy time / play
-    if (Math.random() > 0.3) {
-      blocks.push({ categoryId: "tummy", startHour: 10.5 + Math.random(), durationHours: 0.25 });
-    }
-    if (Math.random() > 0.4) {
-      blocks.push({ categoryId: "play", startHour: 16 + Math.random(), durationHours: 0.5 });
+    for (let f = 0; f < feeds; f++) {
+      const hour = 7 + f * 2 + Math.random();
+      activities.push({
+        categoryId: "feed",
+        label: `Bottle · ${Math.round(2 + Math.random() * 4)} oz`,
+        time: formatTimeFromHour(hour),
+      });
     }
 
-    // Bath
-    if (Math.random() > 0.5) {
-      blocks.push({ categoryId: "bath", startHour: 18 + Math.random() * 0.5, durationHours: 0.25 });
+    for (let d = 0; d < diapers; d++) {
+      const hour = 7 + d * 2.5 + Math.random();
+      activities.push({
+        categoryId: "diaper",
+        label: Math.random() > 0.4 ? "Wet diaper" : "Dirty diaper",
+        time: formatTimeFromHour(hour),
+      });
     }
 
-    // Evening feed
-    blocks.push({ categoryId: "feed", startHour: 18.5 + Math.random() * 0.5, durationHours: 0.3 });
+    activities.sort((a, b) => a.time.localeCompare(b.time));
 
-    data[dayKey] = blocks;
-  }
-
-  return data;
+    return { date, sleepHours: nightHours + napHours, napHours, feeds, oz, diapers, pumps, activities };
+  });
 }
 
-const HOURS = Array.from({ length: 13 }, (_, i) => 7 + i * 2); // 7a, 9a, 11a, 1p, 3p, 5p, 7p, 9p, 11p, 1a, 3a, 5a, 7a
-const TOTAL_HOURS = 24;
-const START_HOUR = 7; // Timeline starts at 7am
-
-function hourToLabel(h: number): string {
-  const normalized = h % 24;
-  if (normalized === 0) return "12a";
-  if (normalized < 12) return `${normalized}a`;
-  if (normalized === 12) return "12p";
-  return `${normalized - 12}p`;
+function formatHM(hours: number): string {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return `${h}h ${m}m`;
 }
 
-function hourToPercent(hour: number): number {
-  let offset = hour - START_HOUR;
-  if (offset < 0) offset += 24;
-  return (offset / TOTAL_HOURS) * 100;
+function formatTimeFromHour(hour: number): string {
+  const h = Math.floor(hour) % 24;
+  const m = Math.round((hour - Math.floor(hour)) * 60);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
+
+const statIcons = [
+  { key: "sleep", icon: Moon, colorClass: "text-sleep", bgClass: "bg-sleep-bg", format: (d: DaySummary) => formatHM(d.sleepHours) },
+  { key: "feed", icon: UtensilsCrossed, colorClass: "text-feed", bgClass: "bg-feed-bg", format: (d: DaySummary) => `${d.feeds}x · ${d.oz}oz` },
+  { key: "diaper", icon: Droplets, colorClass: "text-diaper", bgClass: "bg-diaper-bg", format: (d: DaySummary) => `${d.diapers} changes` },
+];
 
 interface WeekTimelineProps {
   currentDate: Date;
+  activeFilter?: string;
 }
 
-export default function WeekTimeline({ currentDate }: WeekTimelineProps) {
+export default function WeekTimeline({ currentDate, activeFilter = "all" }: WeekTimelineProps) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
-
-  const weekData = useMemo(() => generateWeekData(weekStart), [weekStart.getTime()]);
-
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const summaries = useMemo(() => generateWeekSummaries(weekStart), [weekStart.getTime()]);
   const today = format(new Date(), "yyyy-MM-dd");
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   return (
-    <div className="px-3">
-      {/* Month + Day headers */}
-      <div className="flex mb-1">
-        <div className="w-10 flex-shrink-0 text-[10px] text-muted-foreground font-medium leading-tight pt-1">
-          {format(weekStart, "MMM")}<br />{format(weekStart, "yyyy")}
-        </div>
-        <div className="flex-1 grid grid-cols-7 gap-px">
-          {days.map((day) => {
-            const isToday = format(day, "yyyy-MM-dd") === today;
-            return (
-              <div key={day.toISOString()} className="text-center">
-                <span className="text-[10px] text-muted-foreground">{format(day, "EEE").charAt(0) + format(day, "EEE").charAt(1)}</span>
-                <div className={`text-xs font-semibold mx-auto w-6 h-6 flex items-center justify-center rounded-full ${
-                  isToday ? "bg-primary text-primary-foreground" : "text-foreground"
-                }`}>
-                  {format(day, "d")}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+    <div className="px-4 space-y-2">
+      {/* Color legend */}
+      <div className="flex items-center gap-3 px-1 pb-1">
+        {[
+          { label: "Sleep", cls: "bg-sleep" },
+          { label: "Feed", cls: "bg-feed" },
+          { label: "Diaper", cls: "bg-diaper" },
+          { label: "Pump", cls: "bg-pump" },
+        ].map((l) => (
+          <div key={l.label} className="flex items-center gap-1.5">
+            <span className={`w-2.5 h-2.5 rounded-full ${l.cls}`} />
+            <span className="text-[10px] text-muted-foreground">{l.label}</span>
+          </div>
+        ))}
       </div>
 
-      {/* Timeline grid */}
-      <div className="flex">
-        {/* Hour labels */}
-        <div className="w-10 flex-shrink-0 relative" style={{ height: 480 }}>
-          {HOURS.map((h) => (
-            <div
-              key={h}
-              className="absolute text-[10px] text-muted-foreground -translate-y-1/2"
-              style={{ top: `${hourToPercent(h)}%` }}
+      {summaries.map((day) => {
+        const dayKey = format(day.date, "yyyy-MM-dd");
+        const isToday = dayKey === today;
+        const isExpanded = expandedDay === dayKey;
+
+        // Stacked bar data
+        const total = day.sleepHours + day.feeds + day.diapers + day.pumps;
+        const segments = [
+          { pct: (day.sleepHours / 24) * 100, cls: "bg-sleep" },
+          { pct: (day.feeds / 24) * 100 * 2, cls: "bg-feed" },
+          { pct: (day.diapers / 24) * 100 * 1.5, cls: "bg-diaper" },
+          ...(day.pumps > 0 ? [{ pct: (day.pumps / 24) * 100 * 2, cls: "bg-pump" }] : []),
+        ];
+
+        const filteredActivities = activeFilter === "all"
+          ? day.activities
+          : day.activities.filter((a) => a.categoryId === activeFilter);
+
+        return (
+          <div key={dayKey}>
+            <button
+              onClick={() => setExpandedDay(isExpanded ? null : dayKey)}
+              className={`w-full bg-card rounded-2xl p-4 tracking-card-shadow text-left transition-all active:scale-[0.98] ${
+                isToday ? "ring-2 ring-primary/20" : ""
+              }`}
             >
-              {hourToLabel(h)}
-            </div>
-          ))}
-        </div>
-
-        {/* Day columns */}
-        <div className="flex-1 grid grid-cols-7 gap-px relative" style={{ height: 480 }}>
-          {/* Grid lines */}
-          {HOURS.map((h) => (
-            <div
-              key={`line-${h}`}
-              className="absolute left-0 right-0 border-t border-border/40"
-              style={{ top: `${hourToPercent(h)}%` }}
-            />
-          ))}
-
-          {/* Midnight marker */}
-          <div
-            className="absolute left-0 right-0 border-t-2 border-primary/30"
-            style={{ top: `${hourToPercent(24)}%` }}
-          />
-
-          {days.map((day) => {
-            const dayKey = format(day, "yyyy-MM-dd");
-            const blocks = weekData[dayKey] || [];
-            return (
-              <div key={dayKey} className="relative bg-muted/20 rounded-sm overflow-hidden">
-                {/* Hatched background for visual texture */}
-                <div className="absolute inset-0 opacity-[0.03]" style={{
-                  backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 3px, currentColor 3px, currentColor 4px)",
-                }} />
-
-                {blocks.map((block, i) => {
-                  const color = categoryColors[block.categoryId] || "hsl(var(--muted))";
-                  const top = hourToPercent(block.startHour);
-                  const height = (block.durationHours / TOTAL_HOURS) * 100;
-
-                  // Handle blocks that wrap past midnight
-                  const isSleep = block.categoryId === "sleep";
-                  const maxTop = 100 - top;
-                  const clampedHeight = Math.min(height, maxTop);
-
-                  return (
-                    <div
-                      key={i}
-                      className="absolute left-0.5 right-0.5 rounded-sm"
-                      style={{
-                        top: `${top}%`,
-                        height: `${Math.max(clampedHeight, 0.8)}%`,
-                        backgroundColor: color,
-                        opacity: isSleep ? 0.7 : 0.85,
-                      }}
-                    />
-                  );
-                })}
+              {/* Day header */}
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                    isToday ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                  }`}>
+                    {format(day.date, "d")}
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-foreground">{format(day.date, "EEEE")}</span>
+                    {isToday && <span className="ml-2 text-[10px] text-primary font-medium">Today</span>}
+                  </div>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
               </div>
-            );
-          })}
-        </div>
-      </div>
+
+              {/* Stacked horizontal bar */}
+              <div className="h-2.5 rounded-full bg-muted overflow-hidden flex mb-3">
+                {segments.map((seg, i) => (
+                  <div key={i} className={`${seg.cls} h-full transition-all`} style={{ width: `${Math.min(seg.pct, 50)}%` }} />
+                ))}
+              </div>
+
+              {/* Quick stats row */}
+              <div className="flex items-center gap-3">
+                {statIcons.map(({ key, icon: Icon, colorClass, bgClass, format: fmt }) => (
+                  <div key={key} className="flex items-center gap-1.5">
+                    <div className={`w-6 h-6 rounded-md ${bgClass} flex items-center justify-center`}>
+                      <Icon className={`w-3 h-3 ${colorClass}`} />
+                    </div>
+                    <span className="text-[11px] font-medium text-foreground">{fmt(day)}</span>
+                  </div>
+                ))}
+              </div>
+            </button>
+
+            {/* Expanded detail */}
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-1 pb-1 space-y-1 ml-6 border-l-2 border-border/40 pl-4">
+                    {filteredActivities.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-2">No entries for this filter.</p>
+                    ) : (
+                      filteredActivities.map((activity, i) => {
+                        const cat = categories.find((c) => c.id === activity.categoryId);
+                        if (!cat) return null;
+                        return (
+                          <div key={i} className="flex items-center gap-2 py-1.5">
+                            <div className={`w-7 h-7 rounded-lg ${cat.bgClass} flex items-center justify-center flex-shrink-0`}>
+                              <cat.icon className={`w-3.5 h-3.5 ${cat.colorClass}`} />
+                            </div>
+                            <span className="text-xs text-foreground flex-1">{activity.label}</span>
+                            <span className="text-[10px] text-muted-foreground">{activity.time}</span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
+      })}
     </div>
   );
 }
