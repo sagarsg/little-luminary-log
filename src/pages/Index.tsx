@@ -120,6 +120,20 @@ const Index = () => {
         onVoiceCommand={handleVoiceCommand}
         activeTimerCategory={activeTimer}
       />
+      <FeedLogModal
+        open={feedModalOpen}
+        onClose={() => setFeedModalOpen(false)}
+        onLog={handleQuickLog}
+        onStartTimer={() => {
+          const feedCat = categories.find(c => c.id === "feed");
+          if (feedCat) setActiveTimer(feedCat);
+        }}
+      />
+      <DiaperLogModal
+        open={diaperModalOpen}
+        onClose={() => setDiaperModalOpen(false)}
+        onLog={handleQuickLog}
+      />
       <InstallPrompt />
     </div>
   );
