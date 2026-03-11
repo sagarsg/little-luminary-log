@@ -12,7 +12,7 @@
 - Modal categories: feed (nursing/bottle/solids), diaper (pee/poo/mixed/dry)
 - Instant-log categories: temp, growth, meds, notes, brush, custom
 - Feed subtypes: Nursing (left/right/both + timer), Bottle (breast milk/formula/other + oz), Solids (popular foods + custom + amount)
-- Backend: Lovable Cloud (Supabase) — profiles, babies, entries tables with RLS
+- Backend: Lovable Cloud (Supabase) — profiles, babies, entries, notification_preferences tables with RLS
 - Auth: Email/password + Google + Apple (managed by Lovable Cloud)
 - PWA: vite-plugin-pwa configured, installable from browser
 - Capacitor: configured for future native iOS/Android builds
@@ -21,6 +21,13 @@
 - Center button = Voice/Mic (primary action, always visible)
 - Right side = + / AI button for SmartLogFAB (text log, quick actions, photo)
 - Voice mic: tap to listen, handles commands like "start sleep", "log diaper", "stop timer"
+
+## Notifications
+- Weekly/monthly push notifications (user configurable in Settings)
+- Weekly/monthly email summaries (default: monthly)
+- Cron jobs: weekly Monday 9am, monthly 1st day 9am
+- Edge function: send-summary (generates stats from entries table)
+- Email sending: ready to wire when email domain is configured
 
 ## User Preferences
 - App name: TBD (user will decide later)
@@ -31,9 +38,3 @@
 - Smart Log FAB stays on right side
 - Center nav = mic/voice button
 - **DO NOT copy Huckleberry** - must differentiate in design and UX
-- Don't copy Huckleberry - improve on it
-
-## Notifications & Summaries
-- Weekly/monthly summary push notifications (user configurable)
-- Monthly email summary (default)
-- Charts: growth percentile curves, weight tracking, sleep/feed pattern heatmaps
