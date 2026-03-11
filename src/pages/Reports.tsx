@@ -1,11 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { format, subDays } from "date-fns";
 import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import WeekTimeline from "@/components/reports/WeekTimeline";
 import DayTimeline from "@/components/reports/DayTimeline";
 import RecentEntries from "@/components/reports/RecentEntries";
-import SleepSummary from "@/components/reports/SleepSummary";
-import FeedSummary from "@/components/reports/FeedSummary";
+import GrowthChart from "@/components/reports/GrowthChart";
+import DailyTotalsChart from "@/components/reports/DailyTotalsChart";
 
 type ViewMode = "day" | "week" | "list" | "summary";
 type CategoryFilter = "all" | "sleep" | "feed" | "diaper" | "pump" | "activities" | "growth";
@@ -27,37 +27,12 @@ const categoryFilters: { id: CategoryFilter; label: string }[] = [
   { id: "growth", label: "Growth" },
 ];
 
-const generateMockSleepData = () =>
-  Array.from({ length: 7 }, (_, i) => ({
-    day: format(subDays(new Date(), 6 - i), "EEE"),
-    nap: Math.round((2 + Math.random() * 2) * 10) / 10,
-    night: Math.round((8 + Math.random() * 3) * 10) / 10,
-  }));
-
-const generateMockFeedData = () =>
-  Array.from({ length: 7 }, (_, i) => ({
-    day: format(subDays(new Date(), 6 - i), "EEE"),
-    feeds: Math.floor(5 + Math.random() * 4),
-    oz: Math.round((18 + Math.random() * 10) * 10) / 10,
-  }));
-
 const Reports = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [viewMode, setViewMode] = useState<ViewMode>("summary");
   const [activeFilter, setActiveFilter] = useState<CategoryFilter>("all");
   const [activePeriod, setActivePeriod] = useState("7D");
   const [currentDate, setCurrentDate] = useState(new Date());
-
-  const sleepData = useMemo(generateMockSleepData, []);
-  const feedData = useMemo(generateMockFeedData, []);
-
-  const totalNap = sleepData.reduce((a, d) => a + d.nap, 0) / sleepData.length;
-  const totalNight = sleepData.reduce((a, d) => a + d.night, 0) / sleepData.length;
-  const totalDaily = totalNap + totalNight;
-
-  const pieData = [
-    { name: "Nap", value: totalNap, color: "hsl(230, 45%, 82%)" },
-    { name: "Night", value: totalNight, color: "hsl(230, 45%, 72%)" },
-  ];
+  const [activeMetric, setActiveMetric] = useState<"sleep" | "feeds" | "diapers">("sleep");
 
   const navigateDate = (direction: number) => {
     const days = viewMode === "week" ? 7 : 1;
@@ -98,24 +73,26 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Category Filter Tabs */}
-      <div className="px-5 mb-3 overflow-x-auto scrollbar-none">
-        <div className="flex gap-1 min-w-max">
-          {categoryFilters.map((filter) => (
-            <button
-              key={filter.id}
-              onClick={() => setActiveFilter(filter.id)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
-                activeFilter === filter.id
-                  ? "bg-primary/10 text-primary border border-primary/20"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
+      {/* Category Filter Tabs — only for non-summary views */}
+      {viewMode !== "summary" && (
+        <div className="px-5 mb-3 overflow-x-auto scrollbar-none">
+          <div className="flex gap-1 min-w-max">
+            {categoryFilters.map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => setActiveFilter(filter.id)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
+                  activeFilter === filter.id
+                    ? "bg-primary/10 text-primary border border-primary/20"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Date navigation */}
       {(viewMode === "day" || viewMode === "week") && (
@@ -140,7 +117,7 @@ const Reports = () => {
         </div>
       )}
 
-      {/* Week View — clean daily summary cards */}
+      {/* Week View */}
       {viewMode === "week" && (
         <WeekTimeline currentDate={currentDate} activeFilter={activeFilter} />
       )}
@@ -153,38 +130,18 @@ const Reports = () => {
       )}
 
       {/* List View */}
-      {viewMode === "list" && (
-        <RecentEntries />
-      )}
+      {viewMode === "list" && <RecentEntries />}
 
-      {/* Summary View — filtered by category */}
-      {viewMode === "summary" && (activeFilter === "all" || activeFilter === "sleep") && (
-        <SleepSummary
-          sleepData={sleepData}
-          pieData={pieData}
-          totalNap={totalNap}
-          totalNight={totalNight}
-          totalDaily={totalDaily}
-          activePeriod={activePeriod}
-          setActivePeriod={setActivePeriod}
-        />
-      )}
-      {viewMode === "summary" && (activeFilter === "all" || activeFilter === "feed") && (
-        <div className={activeFilter === "all" ? "mt-4" : ""}>
-          <FeedSummary
-            feedData={feedData}
+      {/* Summary View — Growth + Daily Totals */}
+      {viewMode === "summary" && (
+        <div className="space-y-4">
+          <DailyTotalsChart
             activePeriod={activePeriod}
             setActivePeriod={setActivePeriod}
+            activeMetric={activeMetric}
+            setActiveMetric={setActiveMetric}
           />
-        </div>
-      )}
-      {viewMode === "summary" && !["all", "sleep", "feed"].includes(activeFilter) && (
-        <div className="px-5">
-          <div className="bg-card rounded-2xl p-8 tracking-card-shadow text-center">
-            <p className="text-muted-foreground text-sm">
-              Summary for {categoryFilters.find((f) => f.id === activeFilter)?.label} coming soon
-            </p>
-          </div>
+          <GrowthChart />
         </div>
       )}
     </div>
