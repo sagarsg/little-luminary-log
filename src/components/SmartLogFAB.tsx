@@ -13,7 +13,6 @@ interface SmartLogFABProps {
 }
 
 const quickActions = [
-  { id: "voice", label: "Voice log", icon: Mic, color: "bg-primary" },
   { id: "ai-text", label: "AI text log", icon: MessageSquare, color: "bg-sleep" },
   { id: "photo", label: "Photo log", icon: Camera, color: "bg-feed" },
   { id: "last-feed", label: "Repeat last feed", icon: UtensilsCrossed, color: "bg-feed" },
