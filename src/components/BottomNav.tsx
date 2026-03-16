@@ -41,12 +41,7 @@ function parseAction(transcript: string): "start" | "stop" | "log" {
   return "log";
 }
 
-interface BottomNavProps {
-  onVoiceCommand?: (command: string, category: TrackingCategory | null) => void;
-  activeTimerCategory?: TrackingCategory | null;
-}
-
-const leftTabs = [
+const BottomNav = () => {
   { id: "/", label: "Home", icon: Home },
   { id: "/reports", label: "Reports", icon: BarChart3 },
 ];
