@@ -20,7 +20,7 @@ const quickActions = [
   { id: "last-sleep", label: "Start sleep", icon: Moon, color: "bg-sleep" },
 ];
 
-const SmartLogFAB = ({ onQuickLog, onStartTimer, onVoiceCommand, activeTimerCategory }: SmartLogFABProps) => {
+const SmartLogFAB = ({ onQuickLog, onStartTimer }: SmartLogFABProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [aiTextMode, setAiTextMode] = useState(false);
   const [textInput, setTextInput] = useState("");
