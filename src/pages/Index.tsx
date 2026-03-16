@@ -124,34 +124,15 @@ const Index = () => {
     [logEntry]
   );
 
-  const handleVoiceCommand = useCallback(
-    (command: string, category: TrackingCategory | null) => {
-      if (command === "stop" && activeTimer) {
-        setActiveTimer(null);
-        return;
-      }
-      if (command === "listen") return;
-      if (!category) return;
-
-      if (command === "start" && timerCategories.has(category.id)) {
-        setActiveTimer(category);
-      } else {
-        logEntry(category.id, getDefaultDetail(category.id));
-      }
-    },
-    [activeTimer, logEntry]
-  );
-
-  // Listen for voice commands from BottomNav
+  // Listen for voice log entries from BottomNav conversational assistant
   useEffect(() => {
     const handler = (e: Event) => {
-      const { command, category } = (e as CustomEvent).detail;
-      handleVoiceCommand(command, category);
+      const { categoryId, detail, durationSeconds } = (e as CustomEvent).detail;
+      logEntry(categoryId, detail, durationSeconds);
     };
-    window.addEventListener("voice-command", handler);
-    return () => window.removeEventListener("voice-command", handler);
-  }, [handleVoiceCommand]);
-
+    window.addEventListener("voice-log-entry", handler);
+    return () => window.removeEventListener("voice-log-entry", handler);
+  }, [logEntry]);
   const summary = {
     sleepHours:
       Math.round(
@@ -187,8 +168,6 @@ const Index = () => {
       <SmartLogFAB
         onQuickLog={handleQuickLog}
         onStartTimer={handleStartTimer}
-        onVoiceCommand={handleVoiceCommand}
-        activeTimerCategory={activeTimer}
       />
       <FeedLogModal
         open={feedModalOpen}

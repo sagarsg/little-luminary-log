@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, X, Mic, Camera, MessageSquare, Moon, UtensilsCrossed,
-  Droplets, Milk, Clock, FileText
+  Plus, X, Camera, MessageSquare, Moon, UtensilsCrossed,
+  Droplets
 } from "lucide-react";
 import type { TrackingCategory } from "./TrackingGrid";
 import { categories } from "./TrackingGrid";
@@ -10,12 +10,9 @@ import { categories } from "./TrackingGrid";
 interface SmartLogFABProps {
   onQuickLog: (categoryId: string, detail: string) => void;
   onStartTimer: (category: TrackingCategory) => void;
-  onVoiceCommand: (command: string, category: TrackingCategory | null) => void;
-  activeTimerCategory: TrackingCategory | null;
 }
 
 const quickActions = [
-  { id: "voice", label: "Voice log", icon: Mic, color: "bg-primary" },
   { id: "ai-text", label: "AI text log", icon: MessageSquare, color: "bg-sleep" },
   { id: "photo", label: "Photo log", icon: Camera, color: "bg-feed" },
   { id: "last-feed", label: "Repeat last feed", icon: UtensilsCrossed, color: "bg-feed" },
@@ -23,20 +20,13 @@ const quickActions = [
   { id: "last-sleep", label: "Start sleep", icon: Moon, color: "bg-sleep" },
 ];
 
-const SmartLogFAB = ({ onQuickLog, onStartTimer, onVoiceCommand, activeTimerCategory }: SmartLogFABProps) => {
+const SmartLogFAB = ({ onQuickLog, onStartTimer }: SmartLogFABProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [aiTextMode, setAiTextMode] = useState(false);
   const [textInput, setTextInput] = useState("");
 
   const handleAction = useCallback((actionId: string) => {
     switch (actionId) {
-      case "voice":
-        setIsOpen(false);
-        // Try to start voice recognition
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-          onVoiceCommand("listen", null);
-        }
-        break;
       case "ai-text":
         setAiTextMode(true);
         break;
@@ -60,7 +50,7 @@ const SmartLogFAB = ({ onQuickLog, onStartTimer, onVoiceCommand, activeTimerCate
         break;
       }
     }
-  }, [onQuickLog, onStartTimer, onVoiceCommand]);
+  }, [onQuickLog, onStartTimer]);
 
   const handleAITextSubmit = useCallback(() => {
     if (!textInput.trim()) return;
