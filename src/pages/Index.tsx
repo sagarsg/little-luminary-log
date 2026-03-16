@@ -142,6 +142,16 @@ const Index = () => {
     [activeTimer, logEntry]
   );
 
+  // Listen for voice commands from BottomNav
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { command, category } = (e as CustomEvent).detail;
+      handleVoiceCommand(command, category);
+    };
+    window.addEventListener("voice-command", handler);
+    return () => window.removeEventListener("voice-command", handler);
+  }, [handleVoiceCommand]);
+
   const summary = {
     sleepHours:
       Math.round(
