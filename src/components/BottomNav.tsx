@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, BarChart3, Lightbulb, Baby, Settings, Mic } from "lucide-react";
+import { Home, BarChart3, Baby, Settings, Mic } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { categories, type TrackingCategory } from "./TrackingGrid";
 
@@ -41,16 +41,6 @@ function parseAction(transcript: string): "start" | "stop" | "log" {
   return "log";
 }
 
-const BottomNav = () => {
-  { id: "/", label: "Home", icon: Home },
-  { id: "/reports", label: "Reports", icon: BarChart3 },
-];
-
-const rightTabs = [
-  { id: "/child", label: "Child", icon: Baby },
-  { id: "/settings", label: "Settings", icon: Settings },
-];
-
 const leftTabs = [
   { id: "/", label: "Home", icon: Home },
   { id: "/reports", label: "Reports", icon: BarChart3 },
@@ -67,17 +57,14 @@ const BottomNav = () => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [feedback, setFeedback] = useState("");
-  const [supported, setSupported] = useState(true);
   const recognitionRef = useRef<any>(null);
+  const [supported, setSupported] = useState(true);
 
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setSupported(false);
-      return;
-    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { setSupported(false); return; }
 
-    const recognition = new SpeechRecognition();
+    const recognition = new SR();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
@@ -86,22 +73,33 @@ const BottomNav = () => {
       let final = "";
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          final += result[0].transcript;
+        if (event.results[i].isFinal) {
+          final += event.results[i][0].transcript;
         } else {
-          interim += result[0].transcript;
+          interim += event.results[i][0].transcript;
         }
       }
       if (interim) setTranscript(interim);
       if (final) {
         setTranscript(final);
-        handleVoiceInput(final);
+        const action = parseAction(final);
+        const cat = matchCategory(final);
+
+        if (action === "stop") {
+          setFeedback("Stopping timer");
+          window.dispatchEvent(new CustomEvent("voice-command", { detail: { command: "stop", category: null } }));
+        } else if (cat) {
+          setFeedback(`${action === "start" ? "Starting" : "Logging"} ${cat.label}`);
+          window.dispatchEvent(new CustomEvent("voice-command", { detail: { command: action, category: cat } }));
+        } else {
+          setFeedback(`Try "start sleep" or "log diaper"`);
+        }
+
+        setTimeout(() => { setFeedback(""); setTranscript(""); }, 2500);
       }
     };
 
     recognition.onerror = () => setIsListening(false);
-
     recognition.onend = () => {
       if (recognitionRef.current?._shouldListen) {
         try { recognition.start(); } catch {}
@@ -112,29 +110,6 @@ const BottomNav = () => {
 
     recognitionRef.current = recognition;
   }, []);
-
-  const handleVoiceInput = useCallback(
-    (text: string) => {
-      const action = parseAction(text);
-      const cat = matchCategory(text);
-
-      if (action === "stop") {
-        setFeedback(`Stopping timer`);
-        window.dispatchEvent(new CustomEvent("voice-command", { detail: { command: "stop", category: null } }));
-      } else if (cat) {
-        setFeedback(`${action === "start" ? "Starting" : "Logging"} ${cat.label}`);
-        window.dispatchEvent(new CustomEvent("voice-command", { detail: { command: action, category: cat } }));
-      } else {
-        setFeedback(`Try "start sleep" or "log diaper"`);
-      }
-
-      setTimeout(() => {
-        setFeedback("");
-        setTranscript("");
-      }, 2500);
-    },
-    [activeTimerCategory, onVoiceCommand]
-  );
 
   const toggleListening = useCallback(() => {
     if (!recognitionRef.current) return;
@@ -157,7 +132,7 @@ const BottomNav = () => {
 
   if (location.pathname === "/auth") return null;
 
-  const renderTab = (tab: typeof leftTabs[0]) => {
+  const renderTab = (tab: { id: string; label: string; icon: any }) => {
     const isActive = location.pathname === tab.id;
     return (
       <button
@@ -196,10 +171,9 @@ const BottomNav = () => {
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border">
         <div className="max-w-md mx-auto flex items-center justify-around py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] relative">
-          {/* Left tabs */}
           {leftTabs.map(renderTab)}
 
-          {/* Center mic button */}
+          {/* Center mic button — raised */}
           <div className="flex flex-col items-center -mt-7">
             <motion.button
               whileTap={{ scale: 0.9 }}
@@ -223,7 +197,6 @@ const BottomNav = () => {
             </span>
           </div>
 
-          {/* Right tabs */}
           {rightTabs.map(renderTab)}
         </div>
       </nav>
