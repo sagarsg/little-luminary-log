@@ -27,13 +27,6 @@ const SmartLogFAB = ({ onQuickLog, onStartTimer }: SmartLogFABProps) => {
 
   const handleAction = useCallback((actionId: string) => {
     switch (actionId) {
-      case "voice":
-        setIsOpen(false);
-        // Try to start voice recognition
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-          onVoiceCommand("listen", null);
-        }
-        break;
       case "ai-text":
         setAiTextMode(true);
         break;
