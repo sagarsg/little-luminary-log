@@ -51,7 +51,17 @@ const rightTabs = [
   { id: "/settings", label: "Settings", icon: Settings },
 ];
 
-const BottomNav = ({ onVoiceCommand, activeTimerCategory }: BottomNavProps) => {
+const leftTabs = [
+  { id: "/", label: "Home", icon: Home },
+  { id: "/reports", label: "Reports", icon: BarChart3 },
+];
+
+const rightTabs = [
+  { id: "/child", label: "Child", icon: Baby },
+  { id: "/settings", label: "Settings", icon: Settings },
+];
+
+const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isListening, setIsListening] = useState(false);
