@@ -113,12 +113,12 @@ const BottomNav = ({ onVoiceCommand, activeTimerCategory }: BottomNavProps) => {
       const action = parseAction(text);
       const cat = matchCategory(text);
 
-      if (action === "stop" && activeTimerCategory) {
-        setFeedback(`Stopping ${activeTimerCategory.label} timer`);
-        onVoiceCommand?.("stop", activeTimerCategory);
+      if (action === "stop") {
+        setFeedback(`Stopping timer`);
+        window.dispatchEvent(new CustomEvent("voice-command", { detail: { command: "stop", category: null } }));
       } else if (cat) {
         setFeedback(`${action === "start" ? "Starting" : "Logging"} ${cat.label}`);
-        onVoiceCommand?.(action, cat);
+        window.dispatchEvent(new CustomEvent("voice-command", { detail: { command: action, category: cat } }));
       } else {
         setFeedback(`Try "start sleep" or "log diaper"`);
       }
