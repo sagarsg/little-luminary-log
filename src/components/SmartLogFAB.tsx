@@ -10,8 +10,6 @@ import { categories } from "./TrackingGrid";
 interface SmartLogFABProps {
   onQuickLog: (categoryId: string, detail: string) => void;
   onStartTimer: (category: TrackingCategory) => void;
-  onVoiceCommand: (command: string, category: TrackingCategory | null) => void;
-  activeTimerCategory: TrackingCategory | null;
 }
 
 const quickActions = [
