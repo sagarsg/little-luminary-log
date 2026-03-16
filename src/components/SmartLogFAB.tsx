@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, X, Mic, Camera, MessageSquare, Moon, UtensilsCrossed,
-  Droplets, Milk, Clock, FileText
+  Plus, X, Camera, MessageSquare, Moon, UtensilsCrossed,
+  Droplets
 } from "lucide-react";
 import type { TrackingCategory } from "./TrackingGrid";
 import { categories } from "./TrackingGrid";
