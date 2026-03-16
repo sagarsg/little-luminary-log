@@ -21,16 +21,6 @@ const Index = () => {
   const [feedModalOpen, setFeedModalOpen] = useState(false);
   const [diaperModalOpen, setDiaperModalOpen] = useState(false);
 
-  // Listen for voice commands from BottomNav
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const { command, category } = (e as CustomEvent).detail;
-      handleVoiceCommand(command, category);
-    };
-    window.addEventListener("voice-command", handler);
-    return () => window.removeEventListener("voice-command", handler);
-  }, []);
-
   // Load today's entries from database
   useEffect(() => {
     if (!user) return;
