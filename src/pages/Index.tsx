@@ -151,7 +151,6 @@ const Index = () => {
     window.addEventListener("voice-command", handler);
     return () => window.removeEventListener("voice-command", handler);
   }, [handleVoiceCommand]);
-  );
 
   const summary = {
     sleepHours:
