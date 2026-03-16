@@ -50,7 +50,7 @@ const SmartLogFAB = ({ onQuickLog, onStartTimer }: SmartLogFABProps) => {
         break;
       }
     }
-  }, [onQuickLog, onStartTimer, onVoiceCommand]);
+  }, [onQuickLog, onStartTimer]);
 
   const handleAITextSubmit = useCallback(() => {
     if (!textInput.trim()) return;

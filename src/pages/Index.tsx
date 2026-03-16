@@ -168,8 +168,6 @@ const Index = () => {
       <SmartLogFAB
         onQuickLog={handleQuickLog}
         onStartTimer={handleStartTimer}
-        onVoiceCommand={handleVoiceCommand}
-        activeTimerCategory={activeTimer}
       />
       <FeedLogModal
         open={feedModalOpen}
