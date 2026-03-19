@@ -17,10 +17,10 @@ const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleLogEntry = (categoryId: string, detail: string, durationSeconds?: number) => {
+  const handleLogEntry = (categoryId: string, detail: string, durationSeconds?: number, loggedAt?: string) => {
     window.dispatchEvent(
       new CustomEvent("voice-log-entry", {
-        detail: { categoryId, detail, durationSeconds },
+        detail: { categoryId, detail, durationSeconds, loggedAt },
       })
     );
   };

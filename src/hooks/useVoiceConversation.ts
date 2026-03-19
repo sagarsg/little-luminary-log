@@ -59,7 +59,7 @@ function speak(text: string): Promise<void> {
 }
 
 export function useVoiceConversation(
-  onLogEntry: (categoryId: string, detail: string, durationSeconds?: number) => void
+  onLogEntry: (categoryId: string, detail: string, durationSeconds?: number, loggedAt?: string) => void
 ): UseVoiceConversationReturn {
   const [state, setState] = useState<VoiceConversationState>({
     isListening: false,
@@ -143,14 +143,18 @@ export function useVoiceConversation(
 
         if (action === "log" && entry) {
           // Log the entry and end conversation
+          shouldListenRef.current = false;
+          try { recognitionRef.current?.stop(); } catch {}
           onLogEntry(
             entry.categoryId,
             entry.detail,
-            entry.durationSeconds || undefined
+            entry.durationSeconds || undefined,
+            entry.loggedAt || undefined
           );
           setState((s) => ({
             ...s,
             conversationActive: false,
+            isListening: false,
             botMessage: message,
             transcript: "",
           }));
@@ -163,9 +167,12 @@ export function useVoiceConversation(
         }
 
         if (action === "cancel") {
+          shouldListenRef.current = false;
+          try { recognitionRef.current?.stop(); } catch {}
           setState((s) => ({
             ...s,
             conversationActive: false,
+            isListening: false,
             botMessage: message,
             transcript: "",
           }));

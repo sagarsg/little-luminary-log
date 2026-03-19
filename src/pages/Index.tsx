@@ -54,13 +54,15 @@ const Index = () => {
   }, [user]);
 
   const logEntry = useCallback(
-    async (categoryId: string, detail: string, durationSeconds?: number) => {
+    async (categoryId: string, detail: string, durationSeconds?: number, loggedAt?: string) => {
       if (!user) return;
+
+      const entryTime = loggedAt ? new Date(loggedAt) : new Date();
 
       const newEntry: ActivityEntry = {
         id: crypto.randomUUID(),
         categoryId,
-        time: new Date(),
+        time: entryTime,
         detail,
       };
 
@@ -73,7 +75,7 @@ const Index = () => {
         category_id: categoryId,
         detail,
         duration_seconds: durationSeconds || null,
-        logged_at: newEntry.time.toISOString(),
+        logged_at: entryTime.toISOString(),
       });
 
       if (error) {
@@ -127,8 +129,8 @@ const Index = () => {
   // Listen for voice log entries from BottomNav conversational assistant
   useEffect(() => {
     const handler = (e: Event) => {
-      const { categoryId, detail, durationSeconds } = (e as CustomEvent).detail;
-      logEntry(categoryId, detail, durationSeconds);
+      const { categoryId, detail, durationSeconds, loggedAt } = (e as CustomEvent).detail;
+      logEntry(categoryId, detail, durationSeconds, loggedAt);
     };
     window.addEventListener("voice-log-entry", handler);
     return () => window.removeEventListener("voice-log-entry", handler);
