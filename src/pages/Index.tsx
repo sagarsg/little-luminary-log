@@ -54,13 +54,15 @@ const Index = () => {
   }, [user]);
 
   const logEntry = useCallback(
-    async (categoryId: string, detail: string, durationSeconds?: number) => {
+    async (categoryId: string, detail: string, durationSeconds?: number, loggedAt?: string) => {
       if (!user) return;
+
+      const entryTime = loggedAt ? new Date(loggedAt) : new Date();
 
       const newEntry: ActivityEntry = {
         id: crypto.randomUUID(),
         categoryId,
-        time: new Date(),
+        time: entryTime,
         detail,
       };
 
@@ -73,7 +75,7 @@ const Index = () => {
         category_id: categoryId,
         detail,
         duration_seconds: durationSeconds || null,
-        logged_at: newEntry.time.toISOString(),
+        logged_at: entryTime.toISOString(),
       });
 
       if (error) {
