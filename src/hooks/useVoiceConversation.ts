@@ -59,7 +59,7 @@ function speak(text: string): Promise<void> {
 }
 
 export function useVoiceConversation(
-  onLogEntry: (categoryId: string, detail: string, durationSeconds?: number) => void
+  onLogEntry: (categoryId: string, detail: string, durationSeconds?: number, loggedAt?: string) => void
 ): UseVoiceConversationReturn {
   const [state, setState] = useState<VoiceConversationState>({
     isListening: false,
