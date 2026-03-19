@@ -28,16 +28,69 @@ interface UseVoiceConversationReturn extends VoiceConversationState {
   supported: boolean;
 }
 
-// Industry standard: 1.5s silence after speech ends triggers processing
 const SILENCE_TIMEOUT_MS = 1500;
+
+const CANCEL_PATTERNS = [
+  /^cancel(?: entry)?$/i,
+  /^never mind$/i,
+  /^stop$/i,
+  /^stop listening$/i,
+  /^forget it$/i,
+  /^don't log(?: it| that)?$/i,
+  /^do not log(?: it| that)?$/i,
+  /^discard(?: it| that)?$/i,
+];
+
+const AFFIRMATIVE_PATTERNS = [
+  /^yes$/i,
+  /^yeah$/i,
+  /^yep$/i,
+  /^confirm$/i,
+  /^correct$/i,
+  /^that's right$/i,
+  /^that is right$/i,
+  /^log(?: it| that)?$/i,
+  /^save(?: it| that)?$/i,
+  /^okay$/i,
+  /^ok$/i,
+  /^sounds good$/i,
+  /^do it$/i,
+];
+
+const pad2 = (value: number) => String(value).padStart(2, "0");
+
+const getLocalDate = (now: Date) =>
+  `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+
+const getUtcOffset = (now: Date) => {
+  const totalMinutes = -now.getTimezoneOffset();
+  const sign = totalMinutes >= 0 ? "+" : "-";
+  const absoluteMinutes = Math.abs(totalMinutes);
+  const hours = Math.floor(absoluteMinutes / 60);
+  const minutes = absoluteMinutes % 60;
+  return `${sign}${pad2(hours)}:${pad2(minutes)}`;
+};
+
+const normalizeTranscript = (value: string) =>
+  value.trim().replace(/[.!?]+$/g, "").trim().toLowerCase();
+
+const isCancelTranscript = (value: string) => {
+  const normalized = normalizeTranscript(value);
+  return CANCEL_PATTERNS.some((pattern) => pattern.test(normalized));
+};
+
+const isAffirmativeTranscript = (value: string) => {
+  const normalized = normalizeTranscript(value);
+  return AFFIRMATIVE_PATTERNS.some((pattern) => pattern.test(normalized));
+};
 
 function speak(text: string): Promise<void> {
   return new Promise((resolve) => {
-    if (!("speechSynthesis" in window)) {
+    if (!("speechSynthesis" in window) || !text.trim()) {
       resolve();
       return;
     }
-    // Cancel any ongoing speech
+
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -45,12 +98,16 @@ function speak(text: string): Promise<void> {
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 
-    // Try to pick a natural-sounding voice
     const voices = window.speechSynthesis.getVoices();
     const preferred = voices.find(
-      (v) => v.lang.startsWith("en") && (v.name.includes("Samantha") || v.name.includes("Google") || v.name.includes("Natural"))
+      (voice) =>
+        voice.lang.startsWith("en") &&
+        (voice.name.includes("Samantha") || voice.name.includes("Google") || voice.name.includes("Natural"))
     );
-    if (preferred) utterance.voice = preferred;
+
+    if (preferred) {
+      utterance.voice = preferred;
+    }
 
     utterance.onend = () => resolve();
     utterance.onerror = () => resolve();
@@ -73,11 +130,59 @@ export function useVoiceConversation(
   const recognitionRef = useRef<any>(null);
   const conversationHistoryRef = useRef<ConversationMessage[]>([]);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finalTranscriptRef = useRef("");
+  const pendingEntryRef = useRef<VoiceEntry | null>(null);
   const supported = useRef(true);
   const shouldListenRef = useRef(false);
+  const autoRestartBlockedRef = useRef(false);
+  const startListeningRef = useRef<() => void>(() => {});
 
-  // Initialize speech recognition once
+  const clearSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  }, []);
+
+  const clearMessageTimer = useCallback(() => {
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleMessageClear = useCallback(() => {
+    clearMessageTimer();
+    messageTimerRef.current = setTimeout(() => {
+      setState((current) => ({ ...current, botMessage: "", transcript: "" }));
+    }, 2000);
+  }, [clearMessageTimer]);
+
+  const finalizeConversation = useCallback(
+    (message: string) => {
+      clearSilenceTimer();
+      clearMessageTimer();
+      conversationHistoryRef.current = [];
+      finalTranscriptRef.current = "";
+      pendingEntryRef.current = null;
+
+      setState({
+        isListening: false,
+        isProcessing: false,
+        isSpeaking: false,
+        transcript: "",
+        botMessage: message,
+        conversationActive: false,
+      });
+
+      if (message) {
+        scheduleMessageClear();
+      }
+    },
+    [clearMessageTimer, clearSilenceTimer, scheduleMessageClear]
+  );
+
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
@@ -91,207 +196,283 @@ export function useVoiceConversation(
     recognition.lang = "en-US";
     recognitionRef.current = recognition;
 
-    // Load voices for TTS
     if ("speechSynthesis" in window) {
       window.speechSynthesis.getVoices();
     }
 
     return () => {
-      try { recognition.stop(); } catch {}
+      clearSilenceTimer();
+      clearMessageTimer();
+      try {
+        recognition.stop();
+      } catch {}
       window.speechSynthesis?.cancel();
     };
-  }, []);
-
-  const clearSilenceTimer = useCallback(() => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
-  }, []);
+  }, [clearMessageTimer, clearSilenceTimer]);
 
   const processTranscript = useCallback(
     async (transcript: string) => {
-      if (!transcript.trim()) return;
+      const trimmedTranscript = transcript.trim();
+      if (!trimmedTranscript) return;
 
-      setState((s) => ({ ...s, isListening: false, isProcessing: true, transcript }));
+      clearSilenceTimer();
 
-      // Stop recognition while processing
-      try { recognitionRef.current?.stop(); } catch {}
+      if (isCancelTranscript(trimmedTranscript)) {
+        shouldListenRef.current = false;
+        autoRestartBlockedRef.current = true;
+        clearMessageTimer();
+        try {
+          recognitionRef.current?.stop();
+        } catch {}
 
-      conversationHistoryRef.current.push({ role: "user", content: transcript });
+        setState((current) => ({
+          ...current,
+          isListening: false,
+          isProcessing: false,
+          isSpeaking: true,
+          transcript: "",
+          botMessage: "Cancelled.",
+          conversationActive: false,
+        }));
+
+        await speak("Cancelled.");
+        finalizeConversation("Cancelled.");
+        return;
+      }
+
+      if (pendingEntryRef.current && isAffirmativeTranscript(trimmedTranscript)) {
+        const pendingEntry = pendingEntryRef.current;
+        shouldListenRef.current = false;
+        autoRestartBlockedRef.current = true;
+        clearMessageTimer();
+        try {
+          recognitionRef.current?.stop();
+        } catch {}
+
+        onLogEntry(
+          pendingEntry.categoryId,
+          pendingEntry.detail,
+          pendingEntry.durationSeconds || undefined,
+          pendingEntry.loggedAt || undefined
+        );
+
+        setState((current) => ({
+          ...current,
+          isListening: false,
+          isProcessing: false,
+          isSpeaking: true,
+          transcript: "",
+          botMessage: "Logged.",
+          conversationActive: false,
+        }));
+
+        await speak("Logged.");
+        finalizeConversation("Logged.");
+        return;
+      }
+
+      pendingEntryRef.current = null;
+      autoRestartBlockedRef.current = true;
+
+      setState((current) => ({
+        ...current,
+        isListening: false,
+        isProcessing: true,
+        isSpeaking: false,
+        transcript: trimmedTranscript,
+      }));
 
       try {
+        recognitionRef.current?.stop();
+      } catch {}
+
+      conversationHistoryRef.current.push({ role: "user", content: trimmedTranscript });
+
+      try {
+        const now = new Date();
         const { data, error } = await supabase.functions.invoke("voice-assistant", {
           body: {
-            transcript,
+            transcript: trimmedTranscript,
             conversationHistory: conversationHistoryRef.current,
+            localDate: getLocalDate(now),
+            utcOffset: getUtcOffset(now),
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           },
         });
 
         if (error) throw error;
 
-        const { action, message, entry } = data;
+        const { action, message, entry } = data as {
+          action: "ask" | "confirm" | "log" | "cancel";
+          message: string;
+          entry: VoiceEntry | null;
+        };
 
         conversationHistoryRef.current.push({ role: "assistant", content: message });
 
-        setState((s) => ({ ...s, isProcessing: false, isSpeaking: true, botMessage: message }));
+        setState((current) => ({
+          ...current,
+          isProcessing: false,
+          isSpeaking: true,
+          botMessage: message,
+        }));
 
-        // Speak the response
         await speak(message);
 
-        setState((s) => ({ ...s, isSpeaking: false }));
+        setState((current) => ({ ...current, isSpeaking: false }));
+
+        if (action === "confirm" && entry) {
+          pendingEntryRef.current = entry;
+          autoRestartBlockedRef.current = false;
+          if (shouldListenRef.current) {
+            startListeningRef.current();
+          }
+          return;
+        }
 
         if (action === "log" && entry) {
-          // Log the entry and end conversation
           shouldListenRef.current = false;
-          try { recognitionRef.current?.stop(); } catch {}
+          autoRestartBlockedRef.current = true;
           onLogEntry(
             entry.categoryId,
             entry.detail,
             entry.durationSeconds || undefined,
             entry.loggedAt || undefined
           );
-          setState((s) => ({
-            ...s,
-            conversationActive: false,
-            isListening: false,
-            botMessage: message,
-            transcript: "",
-          }));
-          conversationHistoryRef.current = [];
-          // Clear message after a moment
-          setTimeout(() => {
-            setState((s) => ({ ...s, botMessage: "", transcript: "" }));
-          }, 2000);
+          finalizeConversation(message);
           return;
         }
 
         if (action === "cancel") {
           shouldListenRef.current = false;
-          try { recognitionRef.current?.stop(); } catch {}
-          setState((s) => ({
-            ...s,
-            conversationActive: false,
-            isListening: false,
-            botMessage: message,
-            transcript: "",
-          }));
-          conversationHistoryRef.current = [];
-          setTimeout(() => {
-            setState((s) => ({ ...s, botMessage: "", transcript: "" }));
-          }, 2000);
+          autoRestartBlockedRef.current = true;
+          finalizeConversation(message);
           return;
         }
 
-        // For "ask" or "confirm" — continue listening
+        autoRestartBlockedRef.current = false;
         if (shouldListenRef.current) {
-          startListening();
+          startListeningRef.current();
         }
-      } catch (err) {
-        console.error("Voice assistant error:", err);
-        setState((s) => ({
-          ...s,
+      } catch (error) {
+        console.error("Voice assistant error:", error);
+        autoRestartBlockedRef.current = false;
+        setState((current) => ({
+          ...current,
+          isListening: false,
           isProcessing: false,
+          isSpeaking: false,
           botMessage: "Something went wrong. Try again.",
         }));
-        setTimeout(() => {
-          setState((s) => ({ ...s, botMessage: "" }));
-        }, 2500);
+        scheduleMessageClear();
         if (shouldListenRef.current) {
-          startListening();
+          startListeningRef.current();
         }
       }
     },
-    [onLogEntry]
+    [clearMessageTimer, clearSilenceTimer, finalizeConversation, onLogEntry, scheduleMessageClear]
   );
 
   const startListening = useCallback(() => {
     const recognition = recognitionRef.current;
-    if (!recognition) return;
+    if (!recognition || !shouldListenRef.current) return;
 
+    autoRestartBlockedRef.current = false;
     finalTranscriptRef.current = "";
+    clearSilenceTimer();
 
     recognition.onresult = (event: any) => {
       clearSilenceTimer();
 
-      let interim = "";
-      let final = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          final += event.results[i][0].transcript;
+      let interimTranscript = "";
+      let finalTranscript = "";
+
+      for (let index = event.resultIndex; index < event.results.length; index++) {
+        const result = event.results[index][0]?.transcript || "";
+        if (event.results[index].isFinal) {
+          finalTranscript += result;
         } else {
-          interim += event.results[i][0].transcript;
+          interimTranscript += result;
         }
       }
 
-      if (final) {
-        finalTranscriptRef.current += " " + final;
-        finalTranscriptRef.current = finalTranscriptRef.current.trim();
+      if (finalTranscript) {
+        finalTranscriptRef.current = `${finalTranscriptRef.current} ${finalTranscript}`.trim();
       }
 
-      const display = finalTranscriptRef.current + (interim ? " " + interim : "");
-      setState((s) => ({ ...s, transcript: display.trim() }));
+      const displayTranscript = `${finalTranscriptRef.current} ${interimTranscript}`.trim();
+      setState((current) => ({ ...current, transcript: displayTranscript }));
 
-      // Reset silence timer — process after SILENCE_TIMEOUT_MS of no new results
       silenceTimerRef.current = setTimeout(() => {
-        if (finalTranscriptRef.current.trim()) {
-          const text = finalTranscriptRef.current.trim();
-          finalTranscriptRef.current = "";
-          processTranscript(text);
-        }
+        const spokenText = finalTranscriptRef.current.trim();
+        if (!spokenText) return;
+        finalTranscriptRef.current = "";
+        void processTranscript(spokenText);
       }, SILENCE_TIMEOUT_MS);
     };
 
     recognition.onerror = (event: any) => {
-      // "no-speech" is not a real error, just means silence
-      if (event.error === "no-speech") return;
+      if (event.error === "no-speech" || event.error === "aborted") return;
       console.error("Speech recognition error:", event.error);
     };
 
     recognition.onend = () => {
-      // Restart if we should still be listening and not processing
-      if (shouldListenRef.current) {
-        try { recognition.start(); } catch {}
+      if (shouldListenRef.current && !autoRestartBlockedRef.current) {
+        try {
+          recognition.start();
+        } catch {}
       }
     };
 
     try {
       recognition.start();
-      setState((s) => ({ ...s, isListening: true }));
+      setState((current) => ({ ...current, isListening: true, isProcessing: false }));
     } catch {
-      // Already started
+      // recognition may already be active
     }
   }, [clearSilenceTimer, processTranscript]);
 
+  startListeningRef.current = startListening;
+
   const startConversation = useCallback(() => {
     if (!supported.current) return;
+
     shouldListenRef.current = true;
+    autoRestartBlockedRef.current = true;
+    pendingEntryRef.current = null;
     conversationHistoryRef.current = [];
+    clearSilenceTimer();
+    clearMessageTimer();
+
     setState({
-      isListening: true,
+      isListening: false,
       isProcessing: false,
-      isSpeaking: false,
+      isSpeaking: true,
       transcript: "",
-      botMessage: "I'm listening... what would you like to log?",
+      botMessage: "What would you like to log?",
       conversationActive: true,
     });
 
-    // Brief greeting then start listening
     speak("What would you like to log?").then(() => {
-      setState((s) => ({ ...s, isSpeaking: false, botMessage: "" }));
-      startListening();
+      if (!shouldListenRef.current) return;
+      setState((current) => ({ ...current, isSpeaking: false, botMessage: "" }));
+      autoRestartBlockedRef.current = false;
+      startListeningRef.current();
     });
-
-    setState((s) => ({ ...s, isSpeaking: true }));
-  }, [startListening]);
+  }, [clearMessageTimer, clearSilenceTimer]);
 
   const stopConversation = useCallback(() => {
     shouldListenRef.current = false;
+    autoRestartBlockedRef.current = true;
     clearSilenceTimer();
-    try { recognitionRef.current?.stop(); } catch {}
+    clearMessageTimer();
+    try {
+      recognitionRef.current?.stop();
+    } catch {}
     window.speechSynthesis?.cancel();
     conversationHistoryRef.current = [];
     finalTranscriptRef.current = "";
+    pendingEntryRef.current = null;
     setState({
       isListening: false,
       isProcessing: false,
@@ -300,7 +481,7 @@ export function useVoiceConversation(
       botMessage: "",
       conversationActive: false,
     });
-  }, [clearSilenceTimer]);
+  }, [clearMessageTimer, clearSilenceTimer]);
 
   return {
     ...state,
