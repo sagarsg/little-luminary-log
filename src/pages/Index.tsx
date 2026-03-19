@@ -129,8 +129,8 @@ const Index = () => {
   // Listen for voice log entries from BottomNav conversational assistant
   useEffect(() => {
     const handler = (e: Event) => {
-      const { categoryId, detail, durationSeconds } = (e as CustomEvent).detail;
-      logEntry(categoryId, detail, durationSeconds);
+      const { categoryId, detail, durationSeconds, loggedAt } = (e as CustomEvent).detail;
+      logEntry(categoryId, detail, durationSeconds, loggedAt);
     };
     window.addEventListener("voice-log-entry", handler);
     return () => window.removeEventListener("voice-log-entry", handler);

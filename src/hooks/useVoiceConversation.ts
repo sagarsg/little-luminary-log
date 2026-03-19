@@ -167,9 +167,12 @@ export function useVoiceConversation(
         }
 
         if (action === "cancel") {
+          shouldListenRef.current = false;
+          try { recognitionRef.current?.stop(); } catch {}
           setState((s) => ({
             ...s,
             conversationActive: false,
+            isListening: false,
             botMessage: message,
             transcript: "",
           }));
