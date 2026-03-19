@@ -143,14 +143,18 @@ export function useVoiceConversation(
 
         if (action === "log" && entry) {
           // Log the entry and end conversation
+          shouldListenRef.current = false;
+          try { recognitionRef.current?.stop(); } catch {}
           onLogEntry(
             entry.categoryId,
             entry.detail,
-            entry.durationSeconds || undefined
+            entry.durationSeconds || undefined,
+            entry.loggedAt || undefined
           );
           setState((s) => ({
             ...s,
             conversationActive: false,
+            isListening: false,
             botMessage: message,
             transcript: "",
           }));
