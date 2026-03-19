@@ -87,27 +87,65 @@ const BottomNav = () => {
 
           {/* Center mic button — raised */}
           <div className="flex flex-col items-center -mt-7">
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => (isActive ? voice.stopConversation() : voice.startConversation())}
-              className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors relative ${
-                isActive
-                  ? "bg-destructive text-destructive-foreground"
-                  : "bg-primary/90 text-primary-foreground"
-              }`}
-            >
-              {isActive && voice.isListening && (
-                <>
-                  <span className="absolute inset-0 rounded-full bg-destructive animate-ping opacity-20" />
-                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-destructive animate-pulse" />
-                </>
-              )}
-              {isActive ? (
-                <X className="w-6 h-6 relative z-10" />
-              ) : (
-                <Mic className="w-6 h-6 relative z-10" />
-              )}
-            </motion.button>
+            <div className="relative">
+              {/* Waveform rings when listening */}
+              <AnimatePresence>
+                {isActive && voice.isListening && (
+                  <>
+                    {[0, 1, 2].map((i) => (
+                      <motion.span
+                        key={i}
+                        initial={{ scale: 1, opacity: 0.4 }}
+                        animate={{ scale: [1, 1.6 + i * 0.3], opacity: [0.4, 0] }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Infinity,
+                          delay: i * 0.4,
+                          ease: "easeOut",
+                        }}
+                        className="absolute inset-0 rounded-full border-2 border-destructive"
+                      />
+                    ))}
+                  </>
+                )}
+                {isActive && voice.isSpeaking && (
+                  <>
+                    {[0, 1].map((i) => (
+                      <motion.span
+                        key={`speak-${i}`}
+                        initial={{ scale: 1, opacity: 0.3 }}
+                        animate={{ scale: [1, 1.4 + i * 0.2], opacity: [0.3, 0] }}
+                        transition={{
+                          duration: 1.2,
+                          repeat: Infinity,
+                          delay: i * 0.5,
+                          ease: "easeOut",
+                        }}
+                        className="absolute inset-0 rounded-full border-2 border-primary"
+                      />
+                    ))}
+                  </>
+                )}
+              </AnimatePresence>
+
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                animate={isActive && voice.isListening ? { scale: [1, 1.06, 1] } : {}}
+                transition={isActive && voice.isListening ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" } : {}}
+                onClick={() => (isActive ? voice.stopConversation() : voice.startConversation())}
+                className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors relative z-10 ${
+                  isActive
+                    ? "bg-destructive text-destructive-foreground"
+                    : "bg-primary/90 text-primary-foreground"
+                }`}
+              >
+                {isActive ? (
+                  <X className="w-6 h-6" />
+                ) : (
+                  <Mic className="w-6 h-6" />
+                )}
+              </motion.button>
+            </div>
             <span className={`text-[9px] font-medium mt-0.5 ${isActive ? "text-destructive" : "text-muted-foreground"}`}>
               {isActive
                 ? voice.isProcessing
