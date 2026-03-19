@@ -30,13 +30,70 @@ SIMPLE categories (can log with minimal info):
 - brush: Teeth brushing, no extra details needed.
 `;
 
+const MONTH_PATTERN = /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\b/i;
+
+const pad2 = (value: number) => String(value).padStart(2, "0");
+
+function mentionsExplicitDate(transcript: string) {
+  return (
+    /\b(today|tomorrow|yesterday|last\s+\w+|next\s+\w+)\b/i.test(transcript) ||
+    /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(transcript) ||
+    /\b\d{4}-\d{2}-\d{2}\b/.test(transcript) ||
+    MONTH_PATTERN.test(transcript)
+  );
+}
+
+function extractTimeParts(transcript: string) {
+  const meridiemMatch = transcript.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
+  if (meridiemMatch) {
+    let hours = Number(meridiemMatch[1]);
+    const minutes = Number(meridiemMatch[2] || "0");
+    const meridiem = meridiemMatch[3].toLowerCase();
+
+    if (meridiem === "pm" && hours < 12) hours += 12;
+    if (meridiem === "am" && hours === 12) hours = 0;
+
+    return { hours, minutes };
+  }
+
+  const twentyFourHourMatch = transcript.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+  if (twentyFourHourMatch) {
+    return {
+      hours: Number(twentyFourHourMatch[1]),
+      minutes: Number(twentyFourHourMatch[2]),
+    };
+  }
+
+  return null;
+}
+
+function buildLocalTimestamp(localDate: string, utcOffset: string, hours: number, minutes: number) {
+  return `${localDate}T${pad2(hours)}:${pad2(minutes)}:00${utcOffset}`;
+}
+
+function normalizeLoggedAt(
+  loggedAt: unknown,
+  transcript: string,
+  localDate?: string,
+  utcOffset?: string,
+) {
+  if (localDate && utcOffset && !mentionsExplicitDate(transcript)) {
+    const time = extractTimeParts(transcript);
+    if (time) {
+      return buildLocalTimestamp(localDate, utcOffset, time.hours, time.minutes);
+    }
+  }
+
+  return typeof loggedAt === "string" && loggedAt.trim() ? loggedAt : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { transcript, conversationHistory } = await req.json();
+    const { transcript, conversationHistory, localDate, utcOffset, timeZone } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
@@ -47,16 +104,25 @@ serve(async (req) => {
 
 ${CATEGORIES_INFO}
 
+Current user context:
+- User timezone: ${timeZone || "unknown"}
+- Today's local date: ${localDate || "unknown"}
+- UTC offset: ${utcOffset || "unknown"}
+
 Your job:
 1. Parse what the user said and identify the category and details.
-2. If critical details are missing, ask for them conversationally. Be brief and warm.
-3. When you have enough info, confirm what you're about to log and ask the user to say "yes" or confirm.
-4. If the user says "quantity unknown" or "not sure" for optional fields, skip that detail.
-5. If the user says "cancel" or "never mind", cancel the entry.
+2. If critical details are missing, ask for only the missing detail in a brief conversational way.
+3. If the user only gives one missing detail, combine it with the earlier context.
+4. Once you have enough info, confirm the exact entry before it is logged.
+5. If the user says "quantity unknown" or "not sure" for optional fields, skip that detail.
+6. If the user says "cancel", "cancel entry", or "never mind", cancel the entry.
 
 IMPORTANT RULES:
 - Be concise. Keep responses under 15 words when possible.
-- For time: if not specified, assume "just now" (current time). Don't ask for time unless the user partially mentioned it.
+- Never replace a user-specified time with the current time.
+- If the user gave a time but not a date, treat it as today in the user's local timezone.
+- If the user gave quantity but no time, ask for time.
+- If the user gave time but no required quantity, ask for quantity.
 - For simple categories (bath, tummy, story, screen, skincare, play, brush), you can confirm immediately without asking for details.
 - Always respond in a natural, spoken way (this will be read aloud via TTS).
 
@@ -74,8 +140,8 @@ Respond with JSON only. Format:
 
 - "ask": You need more info. entry can be partial.
 - "confirm": You have enough info and are asking the user to confirm. entry must be complete.
-- "log": User confirmed. entry must be complete. message should be brief like "Got it!" or "Logged!"
-- "cancel": User wants to cancel. entry is null. message should acknowledge cancellation.
+- "log": User confirmed. entry must be complete.
+- "cancel": User wants to cancel. entry is null.
 
 When action is "ask" or before confirmation, entry.detail should reflect what you know so far.`;
 
@@ -88,13 +154,13 @@ When action is "ask" or before confirmation, entry.detail should reflect what yo
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages,
-        temperature: 0.3,
+        temperature: 0.2,
         response_format: { type: "json_object" },
       }),
     });
@@ -119,6 +185,14 @@ When action is "ask" or before confirmation, entry.detail should reflect what yo
       };
     }
 
+    if (parsed?.entry) {
+      parsed.entry.loggedAt = normalizeLoggedAt(parsed.entry.loggedAt, transcript, localDate, utcOffset);
+    }
+
+    if (parsed?.action === "cancel") {
+      parsed.entry = null;
+    }
+
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -131,9 +205,9 @@ When action is "ask" or before confirmation, entry.detail should reflect what yo
         entry: null,
       }),
       {
-        status: 200, // Return 200 so the client can handle it gracefully
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   }
 });
