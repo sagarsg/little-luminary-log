@@ -1,58 +1,9 @@
 import { useState, useMemo } from "react";
-import { format, startOfWeek, addDays } from "date-fns";
+import { format, startOfWeek, addDays, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { Moon, UtensilsCrossed, Droplets, Milk, Baby, ChevronDown } from "lucide-react";
+import { Moon, UtensilsCrossed, Droplets, ChevronDown } from "lucide-react";
 import { categories } from "@/components/TrackingGrid";
-
-type DaySummary = {
-  date: Date;
-  sleepHours: number;
-  napHours: number;
-  feeds: number;
-  oz: number;
-  diapers: number;
-  pumps: number;
-  activities: { categoryId: string; label: string; time: string }[];
-};
-
-function generateWeekSummaries(weekStart: Date): DaySummary[] {
-  return Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(weekStart, i);
-    const nightHours = 8 + Math.random() * 3;
-    const napHours = 1.5 + Math.random() * 2;
-    const feeds = Math.floor(5 + Math.random() * 4);
-    const oz = Math.round((feeds * 3.5 + Math.random() * 4) * 10) / 10;
-    const diapers = Math.floor(4 + Math.random() * 4);
-    const pumps = Math.floor(Math.random() * 3);
-
-    const activities: DaySummary["activities"] = [
-      { categoryId: "sleep", label: `Night sleep · ${formatHM(nightHours)}`, time: "7:00 PM" },
-      { categoryId: "sleep", label: `Nap · ${formatHM(napHours)}`, time: "9:30 AM" },
-    ];
-
-    for (let f = 0; f < feeds; f++) {
-      const hour = 7 + f * 2 + Math.random();
-      activities.push({
-        categoryId: "feed",
-        label: `Bottle · ${Math.round(2 + Math.random() * 4)} oz`,
-        time: formatTimeFromHour(hour),
-      });
-    }
-
-    for (let d = 0; d < diapers; d++) {
-      const hour = 7 + d * 2.5 + Math.random();
-      activities.push({
-        categoryId: "diaper",
-        label: Math.random() > 0.4 ? "Wet diaper" : "Dirty diaper",
-        time: formatTimeFromHour(hour),
-      });
-    }
-
-    activities.sort((a, b) => a.time.localeCompare(b.time));
-
-    return { date, sleepHours: nightHours + napHours, napHours, feeds, oz, diapers, pumps, activities };
-  });
-}
+import { useEntries, type EntryRow } from "@/hooks/useEntries";
 
 function formatHM(hours: number): string {
   const h = Math.floor(hours);
@@ -60,18 +11,40 @@ function formatHM(hours: number): string {
   return `${h}h ${m}m`;
 }
 
-function formatTimeFromHour(hour: number): string {
-  const h = Math.floor(hour) % 24;
-  const m = Math.round((hour - Math.floor(hour)) * 60);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+type DaySummary = {
+  date: Date;
+  sleepHours: number;
+  feeds: number;
+  diapers: number;
+  pumps: number;
+  activities: { categoryId: string; label: string; time: string }[];
+};
+
+function buildWeekSummaries(weekStart: Date, entries: EntryRow[]): DaySummary[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(weekStart, i);
+    const dayEntries = entries.filter((e) => isSameDay(new Date(e.logged_at), date));
+
+    const sleepEntries = dayEntries.filter((e) => e.category_id === "sleep");
+    const sleepHours = sleepEntries.reduce((a, e) => a + (e.duration_seconds || 0) / 3600, 0);
+    const feeds = dayEntries.filter((e) => e.category_id === "feed").length;
+    const diapers = dayEntries.filter((e) => e.category_id === "diaper").length;
+    const pumps = dayEntries.filter((e) => e.category_id === "pump").length;
+
+    const activities = dayEntries.map((e) => ({
+      categoryId: e.category_id,
+      label: e.detail,
+      time: format(new Date(e.logged_at), "h:mm a"),
+    }));
+
+    return { date, sleepHours, feeds, diapers, pumps, activities };
+  });
 }
 
 const statIcons = [
   { key: "sleep", icon: Moon, colorClass: "text-sleep", bgClass: "bg-sleep-bg", format: (d: DaySummary) => formatHM(d.sleepHours) },
-  { key: "feed", icon: UtensilsCrossed, colorClass: "text-feed", bgClass: "bg-feed-bg", format: (d: DaySummary) => `${d.feeds}x · ${d.oz}oz` },
-  { key: "diaper", icon: Droplets, colorClass: "text-diaper", bgClass: "bg-diaper-bg", format: (d: DaySummary) => `${d.diapers} changes` },
+  { key: "feed", icon: UtensilsCrossed, colorClass: "text-feed", bgClass: "bg-feed-bg", format: (d: DaySummary) => `${d.feeds}x` },
+  { key: "diaper", icon: Droplets, colorClass: "text-diaper", bgClass: "bg-diaper-bg", format: (d: DaySummary) => `${d.diapers}` },
 ];
 
 interface WeekTimelineProps {
@@ -81,13 +54,22 @@ interface WeekTimelineProps {
 
 export default function WeekTimeline({ currentDate, activeFilter = "all" }: WeekTimelineProps) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
-  const summaries = useMemo(() => generateWeekSummaries(weekStart), [weekStart.getTime()]);
+  const weekEnd = addDays(weekStart, 6);
+  const { entries, loading } = useEntries(weekStart, weekEnd);
+  const summaries = useMemo(() => buildWeekSummaries(weekStart, entries), [weekStart.getTime(), entries]);
   const today = format(new Date(), "yyyy-MM-dd");
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 space-y-2">
-      {/* Color legend */}
       <div className="flex items-center gap-3 px-1 pb-1">
         {[
           { label: "Sleep", cls: "bg-sleep" },
@@ -107,8 +89,6 @@ export default function WeekTimeline({ currentDate, activeFilter = "all" }: Week
         const isToday = dayKey === today;
         const isExpanded = expandedDay === dayKey;
 
-        // Stacked bar data
-        const total = day.sleepHours + day.feeds + day.diapers + day.pumps;
         const segments = [
           { pct: (day.sleepHours / 24) * 100, cls: "bg-sleep" },
           { pct: (day.feeds / 24) * 100 * 2, cls: "bg-feed" },
@@ -128,7 +108,6 @@ export default function WeekTimeline({ currentDate, activeFilter = "all" }: Week
                 isToday ? "ring-2 ring-primary/20" : ""
               }`}
             >
-              {/* Day header */}
               <div className="flex items-center justify-between mb-2.5">
                 <div className="flex items-center gap-2">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -144,14 +123,12 @@ export default function WeekTimeline({ currentDate, activeFilter = "all" }: Week
                 <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
               </div>
 
-              {/* Stacked horizontal bar */}
               <div className="h-2.5 rounded-full bg-muted overflow-hidden flex mb-3">
                 {segments.map((seg, i) => (
                   <div key={i} className={`${seg.cls} h-full transition-all`} style={{ width: `${Math.min(seg.pct, 50)}%` }} />
                 ))}
               </div>
 
-              {/* Quick stats row */}
               <div className="flex items-center gap-3">
                 {statIcons.map(({ key, icon: Icon, colorClass, bgClass, format: fmt }) => (
                   <div key={key} className="flex items-center gap-1.5">
@@ -164,7 +141,6 @@ export default function WeekTimeline({ currentDate, activeFilter = "all" }: Week
               </div>
             </button>
 
-            {/* Expanded detail */}
             <AnimatePresence>
               {isExpanded && (
                 <motion.div
