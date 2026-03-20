@@ -125,12 +125,12 @@ const Reports = () => {
       {/* Day View */}
       {viewMode === "day" && (
         <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 260px)" }}>
-          <DayTimeline currentDate={currentDate} />
+          <DayTimeline currentDate={currentDate} activeFilter={activeFilter} />
         </div>
       )}
 
       {/* List View */}
-      {viewMode === "list" && <RecentEntries />}
+      {viewMode === "list" && <RecentEntries activeFilter={activeFilter} />}
 
       {/* Summary View — Growth + Daily Totals */}
       {viewMode === "summary" && (
