@@ -1,8 +1,9 @@
 import { useMemo } from "react";
-import { format, subDays } from "date-fns";
+import { format, subDays, isSameDay } from "date-fns";
 import {
-  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend,
+  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip,
 } from "recharts";
+import { useEntriesForPeriod, type EntryRow } from "@/hooks/useEntries";
 
 type Metric = "sleep" | "feeds" | "diapers";
 
@@ -12,6 +13,8 @@ const metricTabs: { id: Metric; label: string }[] = [
   { id: "diapers", label: "Diapers" },
 ];
 
+const timePeriods = ["7D", "14D", "30D"];
+
 interface DailyTotalsChartProps {
   activePeriod: string;
   setActivePeriod: (p: string) => void;
@@ -19,21 +22,22 @@ interface DailyTotalsChartProps {
   setActiveMetric: (m: Metric) => void;
 }
 
-const timePeriods = ["7D", "14D", "30D"];
-
-function generateData(days: number) {
+function buildDailyData(days: number, entries: EntryRow[]) {
   return Array.from({ length: days }, (_, i) => {
     const date = subDays(new Date(), days - 1 - i);
+    const dayEntries = entries.filter((e) => isSameDay(new Date(e.logged_at), date));
+
+    const sleepEntries = dayEntries.filter((e) => e.category_id === "sleep");
+    const sleepTotal = sleepEntries.reduce((a, e) => a + (e.duration_seconds || 0) / 3600, 0);
+
+    const feeds = dayEntries.filter((e) => e.category_id === "feed").length;
+    const diapers = dayEntries.filter((e) => e.category_id === "diaper").length;
+
     return {
       day: format(date, days > 14 ? "M/d" : "EEE"),
-      sleepNight: Math.round((7 + Math.random() * 4) * 10) / 10,
-      sleepNap: Math.round((1 + Math.random() * 3) * 10) / 10,
-      feeds: Math.floor(5 + Math.random() * 5),
-      bottles: Math.floor(3 + Math.random() * 3),
-      nursing: Math.floor(1 + Math.random() * 3),
-      diapers: Math.floor(4 + Math.random() * 5),
-      wet: Math.floor(3 + Math.random() * 3),
-      dirty: Math.floor(1 + Math.random() * 3),
+      sleep: Math.round(sleepTotal * 10) / 10,
+      feeds,
+      diapers,
     };
   });
 }
@@ -45,53 +49,23 @@ export default function DailyTotalsChart({
   setActiveMetric,
 }: DailyTotalsChartProps) {
   const days = activePeriod === "7D" ? 7 : activePeriod === "14D" ? 14 : 30;
-  const data = useMemo(() => generateData(days), [days]);
+  const { entries, loading } = useEntriesForPeriod(days);
+  const data = useMemo(() => buildDailyData(days, entries), [days, entries]);
 
-  // Compute averages
-  const avgSleep = (data.reduce((a, d) => a + d.sleepNight + d.sleepNap, 0) / data.length).toFixed(1);
-  const avgFeeds = (data.reduce((a, d) => a + d.feeds, 0) / data.length).toFixed(1);
-  const avgDiapers = (data.reduce((a, d) => a + d.diapers, 0) / data.length).toFixed(1);
+  const avgSleep = data.length ? (data.reduce((a, d) => a + d.sleep, 0) / data.length).toFixed(1) : "0";
+  const avgFeeds = data.length ? (data.reduce((a, d) => a + d.feeds, 0) / data.length).toFixed(1) : "0";
+  const avgDiapers = data.length ? (data.reduce((a, d) => a + d.diapers, 0) / data.length).toFixed(1) : "0";
 
   const summaryCards = {
-    sleep: [
-      { label: "Avg total", value: `${avgSleep}h`, bgClass: "bg-sleep-bg" },
-      { label: "Avg night", value: `${(data.reduce((a, d) => a + d.sleepNight, 0) / data.length).toFixed(1)}h`, bgClass: "bg-sleep-bg" },
-      { label: "Avg naps", value: `${(data.reduce((a, d) => a + d.sleepNap, 0) / data.length).toFixed(1)}h`, bgClass: "bg-sleep-bg" },
-    ],
-    feeds: [
-      { label: "Avg feeds/day", value: avgFeeds, bgClass: "bg-feed-bg" },
-      { label: "Avg bottles", value: `${(data.reduce((a, d) => a + d.bottles, 0) / data.length).toFixed(1)}`, bgClass: "bg-feed-bg" },
-      { label: "Avg nursing", value: `${(data.reduce((a, d) => a + d.nursing, 0) / data.length).toFixed(1)}`, bgClass: "bg-feed-bg" },
-    ],
-    diapers: [
-      { label: "Avg changes/day", value: avgDiapers, bgClass: "bg-diaper-bg" },
-      { label: "Avg wet", value: `${(data.reduce((a, d) => a + d.wet, 0) / data.length).toFixed(1)}`, bgClass: "bg-diaper-bg" },
-      { label: "Avg dirty", value: `${(data.reduce((a, d) => a + d.dirty, 0) / data.length).toFixed(1)}`, bgClass: "bg-diaper-bg" },
-    ],
+    sleep: [{ label: "Avg sleep/day", value: `${avgSleep}h`, bgClass: "bg-sleep-bg" }],
+    feeds: [{ label: "Avg feeds/day", value: avgFeeds, bgClass: "bg-feed-bg" }],
+    diapers: [{ label: "Avg changes/day", value: avgDiapers, bgClass: "bg-diaper-bg" }],
   };
 
   const chartConfig = {
-    sleep: {
-      bars: [
-        { key: "sleepNight", label: "Night", color: "hsl(var(--sleep))" },
-        { key: "sleepNap", label: "Nap", color: "hsl(var(--sleep) / 0.45)" },
-      ],
-      yFormatter: (v: number) => `${v}h`,
-    },
-    feeds: {
-      bars: [
-        { key: "bottles", label: "Bottle", color: "hsl(var(--feed))" },
-        { key: "nursing", label: "Nursing", color: "hsl(var(--feed) / 0.45)" },
-      ],
-      yFormatter: (v: number) => `${v}`,
-    },
-    diapers: {
-      bars: [
-        { key: "wet", label: "Wet", color: "hsl(var(--diaper))" },
-        { key: "dirty", label: "Dirty", color: "hsl(var(--diaper) / 0.45)" },
-      ],
-      yFormatter: (v: number) => `${v}`,
-    },
+    sleep: { key: "sleep", color: "hsl(var(--sleep))", yFmt: (v: number) => `${v}h` },
+    feeds: { key: "feeds", color: "hsl(var(--feed))", yFmt: (v: number) => `${v}` },
+    diapers: { key: "diapers", color: "hsl(var(--diaper))", yFmt: (v: number) => `${v}` },
   };
 
   const config = chartConfig[activeMetric];
@@ -103,7 +77,6 @@ export default function DailyTotalsChart({
         <h2 className="text-base font-bold text-foreground mb-1">Daily Totals</h2>
         <p className="text-xs text-muted-foreground mb-4">Track trends over time</p>
 
-        {/* Metric tabs */}
         <div className="flex gap-1 mb-3">
           {metricTabs.map((m) => (
             <button
@@ -120,16 +93,13 @@ export default function DailyTotalsChart({
           ))}
         </div>
 
-        {/* Period tabs */}
         <div className="flex gap-2 mb-4">
           {timePeriods.map((p) => (
             <button
               key={p}
               onClick={() => setActivePeriod(p)}
               className={`px-3 py-1.5 text-[11px] font-medium rounded-full transition-all ${
-                activePeriod === p
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground"
+                activePeriod === p ? "bg-muted text-foreground" : "text-muted-foreground"
               }`}
             >
               {p}
@@ -137,7 +107,6 @@ export default function DailyTotalsChart({
           ))}
         </div>
 
-        {/* Summary cards */}
         <div className="flex gap-2 mb-5">
           {summaryCards[activeMetric].map((card) => (
             <div key={card.label} className={`flex-1 ${card.bgClass} rounded-xl p-3 text-center`}>
@@ -147,54 +116,22 @@ export default function DailyTotalsChart({
           ))}
         </div>
 
-        {/* Chart */}
-        <div className="h-48">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} barSize={barSize}>
-              <XAxis
-                dataKey="day"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 10, fill: "hsl(25, 10%, 50%)" }}
-                interval={days > 14 ? 4 : 0}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 10, fill: "hsl(25, 10%, 50%)" }}
-                tickFormatter={config.yFormatter}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "hsl(35, 25%, 98%)",
-                  border: "1px solid hsl(35, 15%, 88%)",
-                  borderRadius: "12px",
-                  fontSize: "12px",
-                }}
-              />
-              {config.bars.map((bar, i) => (
-                <Bar
-                  key={bar.key}
-                  dataKey={bar.key}
-                  name={bar.label}
-                  stackId="stack"
-                  fill={bar.color}
-                  radius={i === config.bars.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Legend */}
-        <div className="flex items-center justify-center gap-4 mt-2">
-          {config.bars.map((bar) => (
-            <div key={bar.key} className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: bar.color }} />
-              <span className="text-[10px] text-muted-foreground">{bar.label}</span>
-            </div>
-          ))}
-        </div>
+        {loading ? (
+          <div className="h-48 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data} barSize={barSize}>
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(25, 10%, 50%)" }} interval={days > 14 ? 4 : 0} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(25, 10%, 50%)" }} tickFormatter={config.yFmt} />
+                <Tooltip contentStyle={{ background: "hsl(35, 25%, 98%)", border: "1px solid hsl(35, 15%, 88%)", borderRadius: "12px", fontSize: "12px" }} />
+                <Bar dataKey={config.key} fill={config.color} radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );

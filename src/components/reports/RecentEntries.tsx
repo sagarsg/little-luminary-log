@@ -1,29 +1,47 @@
 import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
+import { format } from "date-fns";
 import { categories } from "@/components/TrackingGrid";
+import { useEntriesForPeriod } from "@/hooks/useEntries";
 
-type EntryItem = {
-  id: string;
-  categoryId: string;
-  title: string;
-  subtitle: string;
-  emoji?: string;
-};
+interface RecentEntriesProps {
+  activeFilter?: string;
+}
 
-const mockEntries: EntryItem[] = [
-  { id: "1", categoryId: "sleep", title: "Baby slept 11h 46m", subtitle: "9:00 PM - 8:46 AM" },
-  { id: "2", categoryId: "diaper", title: "Baby had pee", subtitle: "9:15 AM", emoji: "💧" },
-  { id: "3", categoryId: "feed", title: "Baby had 7.25oz bottle of Formula", subtitle: "10:00 AM" },
-  { id: "4", categoryId: "sleep", title: "Baby napped 1h 20m", subtitle: "11:30 AM - 12:50 PM" },
-  { id: "5", categoryId: "diaper", title: "Baby had poop", subtitle: "1:15 PM", emoji: "💩" },
-];
+export default function RecentEntries({ activeFilter = "all" }: RecentEntriesProps) {
+  const { entries, loading } = useEntriesForPeriod(7);
 
-export default function RecentEntries() {
+  const filtered = activeFilter === "all"
+    ? entries
+    : entries.filter((e) => e.category_id === activeFilter);
+
+  if (loading) {
+    return (
+      <div className="px-4 pt-3 pb-2 flex justify-center">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (filtered.length === 0) {
+    return (
+      <div className="px-4 pt-8 text-center">
+        <p className="text-sm text-muted-foreground">No entries found for this period.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 pt-3 pb-2 space-y-2">
-      {mockEntries.map((entry, i) => {
-        const cat = categories.find((c) => c.id === entry.categoryId);
+      {filtered.map((entry, i) => {
+        const cat = categories.find((c) => c.id === entry.category_id);
         if (!cat) return null;
+
+        const time = new Date(entry.logged_at);
+        const durationMin = entry.duration_seconds ? Math.round(entry.duration_seconds / 60) : null;
+        const subtitle = durationMin
+          ? `${format(time, "h:mm a")} · ${durationMin}m`
+          : format(time, "h:mm a · MMM d");
 
         return (
           <motion.div
@@ -37,10 +55,8 @@ export default function RecentEntries() {
               <cat.icon className={`w-5 h-5 ${cat.colorClass}`} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                {entry.title} {entry.emoji || ""}
-              </p>
-              <p className="text-xs text-muted-foreground">{entry.subtitle}</p>
+              <p className="text-sm font-medium text-foreground truncate">{entry.detail}</p>
+              <p className="text-xs text-muted-foreground">{subtitle}</p>
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
           </motion.div>
