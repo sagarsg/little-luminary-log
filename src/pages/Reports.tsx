@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format, subDays } from "date-fns";
-import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import WeekTimeline from "@/components/reports/WeekTimeline";
 import DayTimeline from "@/components/reports/DayTimeline";
 import RecentEntries from "@/components/reports/RecentEntries";
@@ -49,9 +49,6 @@ const Reports = () => {
           </div>
           <h1 className="text-lg font-bold text-foreground">Baby</h1>
         </div>
-        <button className="w-8 h-8 rounded-lg bg-card flex items-center justify-center tracking-card-shadow">
-          <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
-        </button>
       </header>
 
       {/* View Mode Tabs */}
