@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format, subDays } from "date-fns";
-import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import WeekTimeline from "@/components/reports/WeekTimeline";
 import DayTimeline from "@/components/reports/DayTimeline";
 import RecentEntries from "@/components/reports/RecentEntries";
