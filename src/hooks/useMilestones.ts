@@ -68,9 +68,25 @@ export function useMilestones() {
         .select("*")
         .in("milestone_id", milestoneIds);
       if (mediaData) {
+        // Generate signed URLs for each media item (bucket is now private)
         for (const m of mediaData as any[]) {
+          const storedPath = m.file_url;
+          // If it's a full URL (legacy), extract path; otherwise use as-is
+          let path = storedPath;
+          const bucketUrlPrefix = `/storage/v1/object/public/milestone-media/`;
+          if (storedPath.includes(bucketUrlPrefix)) {
+            path = storedPath.split(bucketUrlPrefix).pop() || storedPath;
+          }
+          const { data: signedData } = await supabase.storage
+            .from("milestone-media")
+            .createSignedUrl(path, 3600); // 1 hour
+          const resolvedUrl = signedData?.signedUrl || storedPath;
+
           if (!mediaMap[m.milestone_id]) mediaMap[m.milestone_id] = [];
-          mediaMap[m.milestone_id].push(m as MilestoneMedia);
+          mediaMap[m.milestone_id].push({
+            ...m,
+            file_url: resolvedUrl,
+          } as MilestoneMedia);
         }
       }
     }
