@@ -68,9 +68,25 @@ export function useMilestones() {
         .select("*")
         .in("milestone_id", milestoneIds);
       if (mediaData) {
+        // Generate signed URLs for each media item (bucket is now private)
         for (const m of mediaData as any[]) {
+          const storedPath = m.file_url;
+          // If it's a full URL (legacy), extract path; otherwise use as-is
+          let path = storedPath;
+          const bucketUrlPrefix = `/storage/v1/object/public/milestone-media/`;
+          if (storedPath.includes(bucketUrlPrefix)) {
+            path = storedPath.split(bucketUrlPrefix).pop() || storedPath;
+          }
+          const { data: signedData } = await supabase.storage
+            .from("milestone-media")
+            .createSignedUrl(path, 3600); // 1 hour
+          const resolvedUrl = signedData?.signedUrl || storedPath;
+
           if (!mediaMap[m.milestone_id]) mediaMap[m.milestone_id] = [];
-          mediaMap[m.milestone_id].push(m as MilestoneMedia);
+          mediaMap[m.milestone_id].push({
+            ...m,
+            file_url: resolvedUrl,
+          } as MilestoneMedia);
         }
       }
     }
@@ -153,15 +169,13 @@ export function useMilestones() {
         toast.error(`Failed to upload ${file.name}`);
         continue;
       }
-      const { data: urlData } = supabase.storage
-        .from("milestone-media")
-        .getPublicUrl(path);
 
+      // Store the storage path (not public URL) since bucket is private
       const fileType = file.type.startsWith("video") ? "video" : "image";
       await supabase.from("milestone_media").insert({
         milestone_id: milestoneId,
         user_id: user.id,
-        file_url: urlData.publicUrl,
+        file_url: path,
         file_type: fileType,
       });
     }
