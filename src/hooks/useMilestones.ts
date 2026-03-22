@@ -169,15 +169,13 @@ export function useMilestones() {
         toast.error(`Failed to upload ${file.name}`);
         continue;
       }
-      const { data: urlData } = supabase.storage
-        .from("milestone-media")
-        .getPublicUrl(path);
 
+      // Store the storage path (not public URL) since bucket is private
       const fileType = file.type.startsWith("video") ? "video" : "image";
       await supabase.from("milestone_media").insert({
         milestone_id: milestoneId,
         user_id: user.id,
-        file_url: urlData.publicUrl,
+        file_url: path,
         file_type: fileType,
       });
     }
