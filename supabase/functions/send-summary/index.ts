@@ -12,6 +12,16 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate: require a shared cron secret
+    const cronSecret = req.headers.get("x-cron-secret");
+    const expectedSecret = Deno.env.get("CRON_SECRET");
+    if (!expectedSecret || cronSecret !== expectedSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -25,7 +35,9 @@ serve(async (req) => {
     if (prefsError) throw prefsError;
 
     const now = new Date();
-    const results: { user_id: string; status: string }[] = [];
+    let processed = 0;
+    let skipped = 0;
+    let errors = 0;
 
     for (const pref of prefs || []) {
       // Get user's entries for the summary period
@@ -40,12 +52,12 @@ serve(async (req) => {
         .order("logged_at", { ascending: false });
 
       if (entriesError) {
-        results.push({ user_id: pref.user_id, status: "error: " + entriesError.message });
+        errors++;
         continue;
       }
 
       if (!entries || entries.length === 0) {
-        results.push({ user_id: pref.user_id, status: "skipped: no entries" });
+        skipped++;
         continue;
       }
 
@@ -77,16 +89,16 @@ serve(async (req) => {
       };
 
       // Store summary for retrieval (could also send email here)
-      // For now, log it — email sending will be wired when email domain is set up
-      console.log(`Summary for user ${pref.user_id}:`, JSON.stringify(summary));
-      results.push({ user_id: pref.user_id, status: "summary_generated" });
+      console.log(`Summary generated for a user:`, JSON.stringify(summary));
+      processed++;
     }
 
-    return new Response(JSON.stringify({ success: true, results }), {
+    // Return only aggregate counts, no user IDs
+    return new Response(JSON.stringify({ success: true, processed, skipped, errors }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
