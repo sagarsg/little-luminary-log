@@ -1,6 +1,7 @@
-import { format, startOfDay, endOfDay } from "date-fns";
+import { startOfDay, endOfDay } from "date-fns";
 import { categories } from "@/components/TrackingGrid";
 import { useEntries } from "@/hooks/useEntries";
+import { parseEntryDisplay, matchesFilter } from "@/lib/entryDisplay";
 
 type TimeEntry = {
   id: string;
@@ -8,7 +9,8 @@ type TimeEntry = {
   startHour: number;
   durationHours: number;
   label: string;
-  detail?: string;
+  subtitle: string;
+  durationLabel: string;
 };
 
 const HOUR_HEIGHT = 48;
@@ -87,17 +89,20 @@ export default function DayTimeline({ currentDate, activeFilter = "all" }: DayTi
   const { entries: rawEntries, loading } = useEntries(startOfDay(currentDate), endOfDay(currentDate));
 
   const entries: TimeEntry[] = rawEntries
-    .filter((e) => activeFilter === "all" || e.category_id === activeFilter)
+    .filter((e) => matchesFilter(e.category_id, activeFilter))
     .map((e) => {
       const d = new Date(e.logged_at);
       const startHour = d.getHours() + d.getMinutes() / 60;
       const durationHours = e.duration_seconds ? e.duration_seconds / 3600 : 0.25;
+      const display = parseEntryDisplay(e.category_id, e.detail, e.duration_seconds);
       return {
         id: e.id,
         categoryId: e.category_id,
         startHour,
         durationHours,
-        label: e.detail,
+        label: display.label,
+        subtitle: display.subtitle,
+        durationLabel: display.durationLabel,
       };
     });
 
@@ -152,6 +157,7 @@ export default function DayTimeline({ currentDate, activeFilter = "all" }: DayTi
             const widthPercent = 100 / entry.totalCols;
             const leftPercent = entry.col * widthPercent;
             const isNarrow = entry.totalCols > 1;
+            const isShort = height < 40;
 
             return (
               <div
@@ -172,8 +178,16 @@ export default function DayTimeline({ currentDate, activeFilter = "all" }: DayTi
                 <div className="min-w-0 flex-1">
                   <p className={`${isNarrow ? "text-[10px]" : "text-xs"} font-semibold text-white truncate leading-tight`}>
                     {entry.label}
+                    {entry.subtitle && !isShort && (
+                      <span className="font-normal opacity-80 ml-1">{entry.subtitle}</span>
+                    )}
                   </p>
                 </div>
+                {entry.durationLabel && (
+                  <span className={`${isNarrow ? "text-[9px]" : "text-[10px]"} text-white/80 font-medium flex-shrink-0`}>
+                    {entry.durationLabel}
+                  </span>
+                )}
               </div>
             );
           })}

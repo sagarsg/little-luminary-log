@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
-import { format, startOfWeek, addDays, startOfDay, endOfDay, isSameDay } from "date-fns";
+import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { Moon, UtensilsCrossed, Droplets, ChevronDown } from "lucide-react";
 import { categories } from "@/components/TrackingGrid";
 import { useEntries, type EntryRow } from "@/hooks/useEntries";
+import { parseEntryDisplay, matchesFilter } from "@/lib/entryDisplay";
 
 function formatHM(hours: number): string {
   const h = Math.floor(hours);
@@ -17,7 +18,7 @@ type DaySummary = {
   feeds: number;
   diapers: number;
   pumps: number;
-  activities: { categoryId: string; label: string; time: string }[];
+  activities: { categoryId: string; label: string; subtitle: string; durationLabel: string; time: string; durationSeconds: number | null }[];
 };
 
 function buildWeekSummaries(weekStart: Date, entries: EntryRow[]): DaySummary[] {
@@ -31,11 +32,17 @@ function buildWeekSummaries(weekStart: Date, entries: EntryRow[]): DaySummary[] 
     const diapers = dayEntries.filter((e) => e.category_id === "diaper").length;
     const pumps = dayEntries.filter((e) => e.category_id === "pump").length;
 
-    const activities = dayEntries.map((e) => ({
-      categoryId: e.category_id,
-      label: e.detail,
-      time: format(new Date(e.logged_at), "h:mm a"),
-    }));
+    const activities = dayEntries.map((e) => {
+      const display = parseEntryDisplay(e.category_id, e.detail, e.duration_seconds);
+      return {
+        categoryId: e.category_id,
+        label: display.label,
+        subtitle: display.subtitle,
+        durationLabel: display.durationLabel,
+        time: format(new Date(e.logged_at), "h:mm a"),
+        durationSeconds: e.duration_seconds,
+      };
+    });
 
     return { date, sleepHours, feeds, diapers, pumps, activities };
   });
@@ -96,9 +103,7 @@ export default function WeekTimeline({ currentDate, activeFilter = "all" }: Week
           ...(day.pumps > 0 ? [{ pct: (day.pumps / 24) * 100 * 2, cls: "bg-pump" }] : []),
         ];
 
-        const filteredActivities = activeFilter === "all"
-          ? day.activities
-          : day.activities.filter((a) => a.categoryId === activeFilter);
+        const filteredActivities = day.activities.filter((a) => matchesFilter(a.categoryId, activeFilter));
 
         return (
           <div key={dayKey}>
@@ -156,13 +161,22 @@ export default function WeekTimeline({ currentDate, activeFilter = "all" }: Week
                       filteredActivities.map((activity, i) => {
                         const cat = categories.find((c) => c.id === activity.categoryId);
                         if (!cat) return null;
+
+                        const detailParts: string[] = [];
+                        if (activity.subtitle) detailParts.push(activity.subtitle);
+                        if (activity.durationLabel) detailParts.push(activity.durationLabel);
+                        const detailStr = detailParts.length > 0 ? ` · ${detailParts.join(" · ")}` : "";
+
                         return (
                           <div key={i} className="flex items-center gap-2 py-1.5">
                             <div className={`w-7 h-7 rounded-lg ${cat.bgClass} flex items-center justify-center flex-shrink-0`}>
                               <cat.icon className={`w-3.5 h-3.5 ${cat.colorClass}`} />
                             </div>
-                            <span className="text-xs text-foreground flex-1">{activity.label}</span>
-                            <span className="text-[10px] text-muted-foreground">{activity.time}</span>
+                            <span className="text-xs text-foreground flex-1 truncate">
+                              {activity.label}
+                              {detailStr && <span className="text-muted-foreground">{detailStr}</span>}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground flex-shrink-0">{activity.time}</span>
                           </div>
                         );
                       })

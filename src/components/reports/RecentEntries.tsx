@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { categories } from "@/components/TrackingGrid";
 import { useEntriesForPeriod } from "@/hooks/useEntries";
+import { parseEntryDisplay, matchesFilter } from "@/lib/entryDisplay";
 
 interface RecentEntriesProps {
   activeFilter?: string;
@@ -11,9 +12,7 @@ interface RecentEntriesProps {
 export default function RecentEntries({ activeFilter = "all" }: RecentEntriesProps) {
   const { entries, loading } = useEntriesForPeriod(7);
 
-  const filtered = activeFilter === "all"
-    ? entries
-    : entries.filter((e) => e.category_id === activeFilter);
+  const filtered = entries.filter((e) => matchesFilter(e.category_id, activeFilter));
 
   if (loading) {
     return (
@@ -38,10 +37,13 @@ export default function RecentEntries({ activeFilter = "all" }: RecentEntriesPro
         if (!cat) return null;
 
         const time = new Date(entry.logged_at);
-        const durationMin = entry.duration_seconds ? Math.round(entry.duration_seconds / 60) : null;
-        const subtitle = durationMin
-          ? `${format(time, "h:mm a")} · ${durationMin}m`
-          : format(time, "h:mm a · MMM d");
+        const display = parseEntryDisplay(entry.category_id, entry.detail, entry.duration_seconds);
+
+        const parts: string[] = [];
+        if (display.subtitle) parts.push(display.subtitle);
+        if (display.durationLabel) parts.push(display.durationLabel);
+        parts.push(format(time, "h:mm a"));
+        parts.push(format(time, "MMM d"));
 
         return (
           <motion.div
@@ -55,8 +57,8 @@ export default function RecentEntries({ activeFilter = "all" }: RecentEntriesPro
               <cat.icon className={`w-5 h-5 ${cat.colorClass}`} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{entry.detail}</p>
-              <p className="text-xs text-muted-foreground">{subtitle}</p>
+              <p className="text-sm font-medium text-foreground truncate">{display.label}</p>
+              <p className="text-xs text-muted-foreground">{parts.join(" · ")}</p>
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
           </motion.div>
