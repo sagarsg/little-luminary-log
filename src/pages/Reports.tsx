@@ -8,7 +8,7 @@ import GrowthChart from "@/components/reports/GrowthChart";
 import DailyTotalsChart from "@/components/reports/DailyTotalsChart";
 
 type ViewMode = "day" | "week" | "list" | "summary";
-type CategoryFilter = "all" | "sleep" | "feed" | "diaper" | "pump" | "activities" | "growth";
+type CategoryFilter = "all" | "sleep" | "feed" | "diaper" | "pump" | "activities" | "growth" | "temp" | "meds" | "notes";
 
 const viewModes: { id: ViewMode; label: string }[] = [
   { id: "day", label: "Day" },
@@ -25,6 +25,9 @@ const categoryFilters: { id: CategoryFilter; label: string }[] = [
   { id: "pump", label: "Pump" },
   { id: "activities", label: "Activities" },
   { id: "growth", label: "Growth" },
+  { id: "temp", label: "Temp" },
+  { id: "meds", label: "Meds" },
+  { id: "notes", label: "Notes" },
 ];
 
 const Reports = () => {
