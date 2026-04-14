@@ -19,6 +19,7 @@ import {
   Plus,
   ChevronDown,
   ChevronUp,
+  Syringe,
   type LucideIcon,
 } from "lucide-react";
 
@@ -49,6 +50,7 @@ export const activityCategories: TrackingCategory[] = [
   { id: "skincare", label: "Skin to Skin", icon: Heart, colorClass: "text-skincare", bgClass: "bg-skincare-bg" },
   { id: "play", label: "Play", icon: Trees, colorClass: "text-play", bgClass: "bg-play-bg" },
   { id: "brush", label: "Brush Teeth", icon: Sparkles, colorClass: "text-brush", bgClass: "bg-brush-bg" },
+  { id: "vaccine", label: "Vaccine", icon: Syringe, colorClass: "text-vaccine", bgClass: "bg-vaccine-bg" },
   { id: "custom", label: "Custom", icon: Plus, colorClass: "text-custom", bgClass: "bg-custom-bg" },
 ];
 
