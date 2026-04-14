@@ -184,6 +184,16 @@ const Index = () => {
         onClose={() => setDiaperModalOpen(false)}
         onLog={handleQuickLog}
       />
+      <ActivityLogModal
+        open={!!activityModalCategory}
+        category={activityModalCategory}
+        onClose={() => setActivityModalCategory(null)}
+        onLog={handleQuickLog}
+        onStartTimer={(cat) => {
+          setActivityModalCategory(null);
+          setActiveTimer(cat);
+        }}
+      />
       <InstallPrompt />
     </div>
   );
