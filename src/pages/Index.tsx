@@ -119,8 +119,8 @@ const Index = () => {
   }, []);
 
   const handleQuickLog = useCallback(
-    (categoryId: string, detail: string) => {
-      logEntry(categoryId, detail);
+    (categoryId: string, detail: string, durationSeconds?: number) => {
+      logEntry(categoryId, detail, durationSeconds);
     },
     [logEntry]
   );
