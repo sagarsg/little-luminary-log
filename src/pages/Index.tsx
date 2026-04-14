@@ -8,11 +8,10 @@ import SmartLogFAB from "@/components/SmartLogFAB";
 import InstallPrompt from "@/components/InstallPrompt";
 import FeedLogModal from "@/components/FeedLogModal";
 import DiaperLogModal from "@/components/DiaperLogModal";
+import ActivityLogModal from "@/components/ActivityLogModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-
-const timerCategories = new Set(["sleep", "pump", "tummy", "story", "screen", "skincare", "play", "bath"]);
 
 const Index = () => {
   const { user } = useAuth();
@@ -20,6 +19,7 @@ const Index = () => {
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
   const [feedModalOpen, setFeedModalOpen] = useState(false);
   const [diaperModalOpen, setDiaperModalOpen] = useState(false);
+  const [activityModalCategory, setActivityModalCategory] = useState<TrackingCategory | null>(null);
 
   // Load today's entries from database
   useEffect(() => {
@@ -93,13 +93,12 @@ const Index = () => {
         setFeedModalOpen(true);
       } else if (category.id === "diaper") {
         setDiaperModalOpen(true);
-      } else if (timerCategories.has(category.id)) {
-        setActiveTimer(category);
       } else {
-        logEntry(category.id, getDefaultDetail(category.id));
+        // All other categories go through the ActivityLogModal
+        setActivityModalCategory(category);
       }
     },
-    [logEntry]
+    []
   );
 
   const handleTimerStop = useCallback(
@@ -120,8 +119,8 @@ const Index = () => {
   }, []);
 
   const handleQuickLog = useCallback(
-    (categoryId: string, detail: string) => {
-      logEntry(categoryId, detail);
+    (categoryId: string, detail: string, durationSeconds?: number) => {
+      logEntry(categoryId, detail, durationSeconds);
     },
     [logEntry]
   );
@@ -185,28 +184,19 @@ const Index = () => {
         onClose={() => setDiaperModalOpen(false)}
         onLog={handleQuickLog}
       />
+      <ActivityLogModal
+        open={!!activityModalCategory}
+        category={activityModalCategory}
+        onClose={() => setActivityModalCategory(null)}
+        onLog={handleQuickLog}
+        onStartTimer={(cat) => {
+          setActivityModalCategory(null);
+          setActiveTimer(cat);
+        }}
+      />
       <InstallPrompt />
     </div>
   );
 };
-
-function getDefaultDetail(categoryId: string): string {
-  switch (categoryId) {
-    case "diaper": return "Diaper change logged";
-    case "temp": return "Temperature recorded";
-    case "growth": return "Measurement logged";
-    case "meds": return "Medicine administered";
-    case "notes": return "Note added";
-    case "bath": return "Bath time logged";
-    case "tummy": return "Tummy time logged";
-    case "story": return "Story time logged";
-    case "screen": return "Screen time logged";
-    case "skincare": return "Skin to skin logged";
-    case "play": return "Play time logged";
-    case "brush": return "Teeth brushing logged";
-    case "custom": return "Custom activity logged";
-    default: return "Entry logged";
-  }
-}
 
 export default Index;
