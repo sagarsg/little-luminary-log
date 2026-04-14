@@ -199,23 +199,4 @@ const Index = () => {
   );
 };
 
-function getDefaultDetail(categoryId: string): string {
-  switch (categoryId) {
-    case "diaper": return "Diaper change logged";
-    case "temp": return "Temperature recorded";
-    case "growth": return "Measurement logged";
-    case "meds": return "Medicine administered";
-    case "notes": return "Note added";
-    case "bath": return "Bath time logged";
-    case "tummy": return "Tummy time logged";
-    case "story": return "Story time logged";
-    case "screen": return "Screen time logged";
-    case "skincare": return "Skin to skin logged";
-    case "play": return "Play time logged";
-    case "brush": return "Teeth brushing logged";
-    case "custom": return "Custom activity logged";
-    default: return "Entry logged";
-  }
-}
-
 export default Index;
