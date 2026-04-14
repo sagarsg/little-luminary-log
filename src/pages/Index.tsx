@@ -93,13 +93,12 @@ const Index = () => {
         setFeedModalOpen(true);
       } else if (category.id === "diaper") {
         setDiaperModalOpen(true);
-      } else if (timerCategories.has(category.id)) {
-        setActiveTimer(category);
       } else {
-        logEntry(category.id, getDefaultDetail(category.id));
+        // All other categories go through the ActivityLogModal
+        setActivityModalCategory(category);
       }
     },
-    [logEntry]
+    []
   );
 
   const handleTimerStop = useCallback(
