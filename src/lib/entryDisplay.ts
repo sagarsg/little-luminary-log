@@ -95,6 +95,15 @@ export function parseEntryDisplay(
     };
   }
 
+  if (categoryId === "vaccine") {
+    const parts = detail.split(" — ");
+    return {
+      label: "Vaccine",
+      subtitle: parts[0] || "",
+      durationLabel: "",
+    };
+  }
+
   // Timer / activity categories — show category name + duration
   const cat = categories.find((c) => c.id === categoryId);
   return {
@@ -105,7 +114,7 @@ export function parseEntryDisplay(
 }
 
 const ACTIVITY_IDS = [
-  "bath", "tummy", "story", "screen", "skincare", "play", "brush", "custom",
+  "bath", "tummy", "story", "screen", "skincare", "play", "brush", "vaccine", "custom",
 ];
 
 export function matchesFilter(categoryId: string, filter: string): boolean {

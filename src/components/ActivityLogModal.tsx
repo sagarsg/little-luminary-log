@@ -33,6 +33,10 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
   // Notes state
   const [noteText, setNoteText] = useState("");
 
+  // Vaccine state
+  const [vaccineName, setVaccineName] = useState("");
+  const [vaccineNote, setVaccineNote] = useState("");
+
   // Sleep manual entry
   const [sleepHours, setSleepHours] = useState(0);
   const [sleepMinutes, setSleepMinutes] = useState(30);
@@ -62,6 +66,8 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
     setSleepMinutes(30);
     setActivityMinutes(15);
     setActivityNote("");
+    setVaccineName("");
+    setVaccineNote("");
     setEntryMode("manual");
   };
 
@@ -106,6 +112,10 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
 
       case "notes":
         onLog(category.id, noteText || "Note added");
+        break;
+
+      case "vaccine":
+        onLog(category.id, vaccineName ? `${vaccineName}${vaccineNote ? ` — ${vaccineNote}` : ""}` : "Vaccination logged");
         break;
 
       case "sleep": {
@@ -350,6 +360,32 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
         return (
           <div>
             <p className="text-xs text-muted-foreground text-center py-2">Tap "Log" to record teeth brushing</p>
+          </div>
+        );
+
+      case "vaccine":
+        return (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Vaccine Name</p>
+              <input
+                type="text"
+                value={vaccineName}
+                onChange={(e) => setVaccineName(e.target.value)}
+                placeholder="e.g. DTaP, MMR, Rotavirus"
+                className="w-full bg-muted rounded-xl px-3 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-vaccine/30 placeholder:text-muted-foreground"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Notes (optional)</p>
+              <input
+                type="text"
+                value={vaccineNote}
+                onChange={(e) => setVaccineNote(e.target.value)}
+                placeholder="e.g. 2-month dose, no reaction"
+                className="w-full bg-muted rounded-xl px-3 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-vaccine/30 placeholder:text-muted-foreground"
+              />
+            </div>
           </div>
         );
 

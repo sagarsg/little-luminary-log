@@ -115,6 +115,10 @@ export default {
           DEFAULT: "hsl(var(--custom))",
           bg: "hsl(var(--custom-bg))",
         },
+        vaccine: {
+          DEFAULT: "hsl(var(--vaccine))",
+          bg: "hsl(var(--vaccine-bg))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
