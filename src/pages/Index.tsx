@@ -8,11 +8,10 @@ import SmartLogFAB from "@/components/SmartLogFAB";
 import InstallPrompt from "@/components/InstallPrompt";
 import FeedLogModal from "@/components/FeedLogModal";
 import DiaperLogModal from "@/components/DiaperLogModal";
+import ActivityLogModal from "@/components/ActivityLogModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-
-const timerCategories = new Set(["sleep", "pump", "tummy", "story", "screen", "skincare", "play", "bath"]);
 
 const Index = () => {
   const { user } = useAuth();
