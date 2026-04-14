@@ -19,6 +19,7 @@ const Index = () => {
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
   const [feedModalOpen, setFeedModalOpen] = useState(false);
   const [diaperModalOpen, setDiaperModalOpen] = useState(false);
+  const [activityModalCategory, setActivityModalCategory] = useState<TrackingCategory | null>(null);
 
   // Load today's entries from database
   useEffect(() => {
