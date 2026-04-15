@@ -45,8 +45,6 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
   const [activityMinutes, setActivityMinutes] = useState(15);
   const [activityNote, setActivityNote] = useState("");
 
-  // Mode for timer categories: "timer" or "manual"
-  const [entryMode, setEntryMode] = useState<"timer" | "manual">("manual");
 
   const timerCategories = new Set(["sleep", "pump", "tummy", "story", "screen", "skincare", "play", "bath"]);
 
@@ -100,11 +98,6 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
         break;
 
       case "pump": {
-        if (entryMode === "timer") {
-          onStartTimer(category);
-          handleClose();
-          return;
-        }
         const durSec = pumpMinutes * 60;
         onLog(category.id, `${pumpOz} oz pumped — ${pumpMinutes} min session`, durSec);
         break;
@@ -119,11 +112,6 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
         break;
 
       case "sleep": {
-        if (entryMode === "timer") {
-          onStartTimer(category);
-          handleClose();
-          return;
-        }
         const totalMin = sleepHours * 60 + sleepMinutes;
         const durSec = totalMin * 60;
         onLog(category.id, `${totalMin} min sleep`, durSec);
@@ -139,12 +127,6 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
         break;
 
       default: {
-        // Timer-based activities: bath, tummy, story, screen, skincare, play
-        if (entryMode === "timer") {
-          onStartTimer(category);
-          handleClose();
-          return;
-        }
         const durSec = activityMinutes * 60;
         const note = activityNote ? ` — ${activityNote}` : "";
         onLog(category.id, `${activityMinutes} min session${note}`, durSec);
