@@ -139,7 +139,6 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
   if (!open || !category) return null;
 
   const isTimerCategory = timerCategories.has(category.id);
-  const showTimerToggle = isTimerCategory;
 
   const renderContent = () => {
     switch (category.id) {
