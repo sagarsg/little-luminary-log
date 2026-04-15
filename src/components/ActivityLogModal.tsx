@@ -66,7 +66,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
     setActivityNote("");
     setVaccineName("");
     setVaccineNote("");
-    setEntryMode("manual");
+    
   };
 
   const handleClose = () => {
