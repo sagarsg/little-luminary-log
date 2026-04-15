@@ -450,12 +450,12 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
             className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
           />
           <motion.div
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 60 }}
-            className="fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-x-0 top-[50%] translate-y-[-50%] z-50 max-w-md mx-auto px-4"
           >
-            <div className="bg-card rounded-t-3xl p-5 pb-8 shadow-xl">
+            <div className="bg-card rounded-3xl p-5 shadow-xl max-h-[80vh] overflow-y-auto">
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
