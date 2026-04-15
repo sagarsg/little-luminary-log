@@ -45,8 +45,6 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
   const [activityMinutes, setActivityMinutes] = useState(15);
   const [activityNote, setActivityNote] = useState("");
 
-  // Mode for timer categories: "timer" or "manual"
-  const [entryMode, setEntryMode] = useState<"timer" | "manual">("manual");
 
   const timerCategories = new Set(["sleep", "pump", "tummy", "story", "screen", "skincare", "play", "bath"]);
 
@@ -68,7 +66,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
     setActivityNote("");
     setVaccineName("");
     setVaccineNote("");
-    setEntryMode("manual");
+    
   };
 
   const handleClose = () => {
@@ -100,11 +98,6 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
         break;
 
       case "pump": {
-        if (entryMode === "timer") {
-          onStartTimer(category);
-          handleClose();
-          return;
-        }
         const durSec = pumpMinutes * 60;
         onLog(category.id, `${pumpOz} oz pumped — ${pumpMinutes} min session`, durSec);
         break;
@@ -119,11 +112,6 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
         break;
 
       case "sleep": {
-        if (entryMode === "timer") {
-          onStartTimer(category);
-          handleClose();
-          return;
-        }
         const totalMin = sleepHours * 60 + sleepMinutes;
         const durSec = totalMin * 60;
         onLog(category.id, `${totalMin} min sleep`, durSec);
@@ -139,12 +127,6 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
         break;
 
       default: {
-        // Timer-based activities: bath, tummy, story, screen, skincare, play
-        if (entryMode === "timer") {
-          onStartTimer(category);
-          handleClose();
-          return;
-        }
         const durSec = activityMinutes * 60;
         const note = activityNote ? ` — ${activityNote}` : "";
         onLog(category.id, `${activityMinutes} min session${note}`, durSec);
@@ -157,7 +139,6 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
   if (!open || !category) return null;
 
   const isTimerCategory = timerCategories.has(category.id);
-  const showTimerToggle = isTimerCategory;
 
   const renderContent = () => {
     switch (category.id) {
@@ -276,7 +257,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
         );
 
       case "pump":
-        return entryMode === "manual" ? (
+        return (
           <div className="space-y-4">
             <div>
               <p className="text-xs text-muted-foreground mb-2">Amount Pumped</p>
@@ -307,7 +288,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
               </div>
             </div>
           </div>
-        ) : null;
+        );
 
       case "notes":
         return (
@@ -324,7 +305,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
         );
 
       case "sleep":
-        return entryMode === "manual" ? (
+        return (
           <div className="space-y-4">
             <p className="text-xs text-muted-foreground mb-2">How long did baby sleep?</p>
             <div className="flex items-center justify-center gap-6">
@@ -354,7 +335,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
               </div>
             </div>
           </div>
-        ) : null;
+        );
 
       case "brush":
         return (
@@ -405,7 +386,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
 
       default:
         // Timer-based activities: bath, tummy, story, screen, skincare, play
-        return entryMode === "manual" ? (
+        return (
           <div className="space-y-4">
             <div>
               <p className="text-xs text-muted-foreground mb-2">Duration</p>
@@ -432,11 +413,9 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
               />
             </div>
           </div>
-        ) : null;
+        );
     }
   };
-
-  const accentColor = category.colorClass.replace("text-", "");
 
   return (
     <AnimatePresence>
@@ -467,49 +446,27 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
                 </button>
               </div>
 
-              {/* Timer / Manual toggle for timer categories */}
-              {showTimerToggle && (
-                <div className="flex gap-2 mb-5">
-                  <button
-                    onClick={() => setEntryMode("manual")}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
-                      entryMode === "manual"
-                        ? `bg-${accentColor}/15 ${category.colorClass} border border-${accentColor}/30`
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    Log Entry
-                  </button>
-                  <button
-                    onClick={() => setEntryMode("timer")}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
-                      entryMode === "timer"
-                        ? `bg-${accentColor}/15 ${category.colorClass} border border-${accentColor}/30`
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    Start Timer
-                  </button>
-                </div>
-              )}
-
-              {/* Content */}
-              {entryMode === "timer" && showTimerToggle ? (
-                <p className="text-xs text-muted-foreground text-center py-4">
-                  Timer will start tracking when you tap the button below
-                </p>
-              ) : (
-                renderContent()
-              )}
+              {/* Content — always show manual entry fields */}
+              {renderContent()}
 
               {/* Log button */}
               <button
                 onClick={handleLog}
-                className={`w-full mt-6 py-3 rounded-2xl bg-${accentColor} text-primary-foreground text-sm font-semibold active:scale-[0.98] transition-transform`}
+                className="w-full mt-5 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold active:scale-[0.98] transition-transform"
               >
-                {entryMode === "timer" ? `Start ${category.label} Timer` : `Log ${category.label}`}
+                Log {category.label}
               </button>
+
+              {/* Timer shortcut for timer categories */}
+              {isTimerCategory && (
+                <button
+                  onClick={() => { onStartTimer(category); handleClose(); }}
+                  className="w-full mt-2 py-2.5 rounded-2xl border border-border text-muted-foreground text-xs font-medium flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  Or Start Timer Instead
+                </button>
+              )}
             </div>
           </motion.div>
         </>
