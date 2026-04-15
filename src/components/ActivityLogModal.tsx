@@ -276,7 +276,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
         );
 
       case "pump":
-        return entryMode === "manual" ? (
+        return (
           <div className="space-y-4">
             <div>
               <p className="text-xs text-muted-foreground mb-2">Amount Pumped</p>
