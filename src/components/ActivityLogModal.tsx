@@ -417,8 +417,6 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
     }
   };
 
-  const accentColor = category.colorClass.replace("text-", "");
-
   return (
     <AnimatePresence>
       {open && (
