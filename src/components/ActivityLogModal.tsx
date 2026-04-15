@@ -460,7 +460,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
               </button>
 
               {/* Timer shortcut for timer categories */}
-              {showTimerToggle && (
+              {isTimerCategory && (
                 <button
                   onClick={() => { onStartTimer(category); handleClose(); }}
                   className="w-full mt-2 py-2.5 rounded-2xl border border-border text-muted-foreground text-xs font-medium flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
