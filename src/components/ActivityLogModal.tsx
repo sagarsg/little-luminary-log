@@ -307,7 +307,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
               </div>
             </div>
           </div>
-        ) : null;
+        );
 
       case "notes":
         return (
@@ -324,7 +324,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
         );
 
       case "sleep":
-        return entryMode === "manual" ? (
+        return (
           <div className="space-y-4">
             <p className="text-xs text-muted-foreground mb-2">How long did baby sleep?</p>
             <div className="flex items-center justify-center gap-6">
@@ -354,7 +354,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
               </div>
             </div>
           </div>
-        ) : null;
+        );
 
       case "brush":
         return (
@@ -405,7 +405,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
 
       default:
         // Timer-based activities: bath, tummy, story, screen, skincare, play
-        return entryMode === "manual" ? (
+        return (
           <div className="space-y-4">
             <div>
               <p className="text-xs text-muted-foreground mb-2">Duration</p>
@@ -432,7 +432,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
               />
             </div>
           </div>
-        ) : null;
+        );
     }
   };
 
