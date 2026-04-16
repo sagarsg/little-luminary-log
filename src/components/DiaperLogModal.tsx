@@ -41,45 +41,49 @@ const DiaperLogModal = ({ open, onClose, onLog }: DiaperLogModalProps) => {
             className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
           />
           <motion.div
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 60 }}
-            className="fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-x-0 top-4 bottom-24 z-50 mx-auto flex max-w-md items-center px-4 sm:top-8 sm:bottom-8"
           >
-            <div className="bg-card rounded-t-3xl p-5 pb-8 shadow-xl">
+            <div className="flex max-h-full w-full flex-col overflow-hidden rounded-3xl bg-card shadow-xl">
               {/* Header */}
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between px-5 pt-5 mb-4">
                 <h3 className="text-base font-semibold text-foreground">Log Diaper</h3>
                 <button onClick={onClose} className="p-1.5 rounded-full bg-muted">
                   <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
 
-              {/* Diaper type grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {diaperOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    onClick={() => setDiaperType(option.id)}
-                    className={`flex flex-col items-center gap-2 py-5 rounded-2xl text-sm font-medium transition-all ${
-                      diaperType === option.id
-                        ? "bg-diaper/15 text-diaper border-2 border-diaper/30 scale-[1.02]"
-                        : "bg-muted text-muted-foreground border-2 border-transparent"
-                    }`}
-                  >
-                    <span className="text-2xl">{option.emoji}</span>
-                    <span className="text-xs">{option.label}</span>
-                  </button>
-                ))}
+              <div className="flex-1 overflow-y-auto px-5 pb-4">
+                {/* Diaper type grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  {diaperOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => setDiaperType(option.id)}
+                      className={`flex flex-col items-center gap-2 py-5 rounded-2xl text-sm font-medium transition-all ${
+                        diaperType === option.id
+                          ? "bg-diaper/15 text-diaper border-2 border-diaper/30 scale-[1.02]"
+                          : "bg-muted text-muted-foreground border-2 border-transparent"
+                      }`}
+                    >
+                      <span className="text-2xl">{option.emoji}</span>
+                      <span className="text-xs">{option.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Log button */}
-              <button
-                onClick={handleLog}
-                className="w-full mt-6 py-3 rounded-2xl bg-diaper text-primary-foreground text-sm font-semibold active:scale-[0.98] transition-transform"
-              >
-                Log Diaper
-              </button>
+              {/* Sticky footer */}
+              <div className="border-t border-border bg-card/95 px-5 pb-5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-card/90">
+                <button
+                  onClick={handleLog}
+                  className="w-full py-3 rounded-2xl bg-foreground text-background text-sm font-semibold active:scale-[0.98] transition-transform"
+                >
+                  Log Diaper
+                </button>
+              </div>
             </div>
           </motion.div>
         </>

@@ -433,7 +433,7 @@ const ActivityLogModal = ({ open, category, onClose, onLog, onStartTimer }: Acti
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-x-0 top-4 bottom-24 z-50 mx-auto flex max-w-md items-start px-4 sm:top-8 sm:bottom-8"
+            className="fixed inset-x-0 top-4 bottom-24 z-50 mx-auto flex max-w-md items-center px-4 sm:top-8 sm:bottom-8"
           >
             <div className="flex max-h-full w-full flex-col overflow-hidden rounded-3xl bg-card shadow-xl">
               {/* Header */}
