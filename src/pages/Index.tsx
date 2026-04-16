@@ -163,7 +163,13 @@ const Index = () => {
       </div>
 
       <div className="mt-4">
-        <RecentActivity entries={entries} />
+        <RecentActivity
+          entries={entries}
+          onEntryUpdated={(id, detail) =>
+            setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, detail } : e)))
+          }
+          onEntryDeleted={(id) => setEntries((prev) => prev.filter((e) => e.id !== id))}
+        />
       </div>
 
       <SmartLogFAB
